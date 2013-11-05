@@ -96,6 +96,7 @@ AddrSpace::AddrSpace(OpenFile *executable)
 	pageTable[i].readOnly = FALSE;  // if the code segment was entirely on 
 					// a separate page, we could set its 
 					// pages to be read-only
+	pageTable[i].shared= FALSE;
     }
 // zero out the entire address space, to zero the unitialized data segment 
 // and the stack segment
@@ -156,6 +157,7 @@ AddrSpace::AddrSpace(AddrSpace *parentSpace)
         pageTable[i].readOnly = parentPageTable[i].readOnly;  	// if the code segment was entirely on
                                         			// a separate page, we could set its
                                         			// pages to be read-only
+        pageTable[i].shared= FALSE;
     }
 
     // Copy the contents
@@ -163,6 +165,68 @@ AddrSpace::AddrSpace(AddrSpace *parentSpace)
     unsigned startAddrChild = numPagesAllocated*PageSize;
     for (i=0; i<size; i++) {
        machine->mainMemory[startAddrChild+i] = machine->mainMemory[startAddrParent+i];
+    }
+
+    numPagesAllocated += numPages;
+}
+
+//----------------------------------------------------------------------
+// This constructor is used to Initialize an address space and allocate
+// memory
+//----------------------------------------------------------------------
+
+AddrSpace::AddrSpace(AddrSpace *callerSpace, int sharedSize)
+{
+    unsigned sharedPages = sharedSize / PageSize; // compute the number of pages required
+
+    callerPages = callerSpace->GetNumPages();
+    numPages = callerPages + sharedPages;
+    unsigned i, size = numPages * PageSize;
+    unsigned callerSize = callerPages * PageSize;
+
+    ASSERT(numPages+numPagesAllocated <= NumPhysPages);                // check we're not trying
+                                                                                // to run anything too big --
+                                                                                // at least until we have
+                                                                                // virtual memory
+
+    DEBUG('a', "Initializing address space, num pages %d, size %d\n",
+                                        numPages, size);
+    // first, set up the translation
+    TranslationEntry* callerPageTable = callerSpace->GetPageTable();
+    pageTable = new TranslationEntry[numPages];
+    for (i = 0; i < callerPages; i++) {
+        pageTable[i].virtualPage = i;
+        pageTable[i].physicalPage = i+numPagesAllocated;
+        pageTable[i].valid = callerPageTable[i].valid;
+        pageTable[i].use = callerPageTable[i].use;
+        pageTable[i].dirty = callerPageTable[i].dirty;
+        pageTable[i].readOnly = callerPageTable[i].readOnly;  	// if the code segment was entirely on
+                                        			// a separate page, we could set its
+                                        			// pages to be read-only
+        pageTable[i].shared = FALSE;
+    }
+
+    // Now set up the translation entry for the shared memory region
+    for(i = callerPages; i <numPages; ++i) {
+        pageTable[i].virtualPage = i;
+        pageTable[i].physicalPage = i+numPagesAllocated;
+        pageTable[i].valid = TRUE;
+        pageTable[i].use = FALSE;
+        pageTable[i].dirty = FALSE;
+        pageTable[i].readOnly = FALSE;  // if the code segment was entirely on 
+        pageTable[i].shared = TRUE; // this is a shared region
+    }
+
+    // Copy the contents
+    unsigned startAddrcaller = callerPageTable[0].physicalPage*PageSize;
+    unsigned startAddrChild = numPagesAllocated*PageSize;
+    for (i=0; i<size; i++) {
+        // Intizalize the shared memory with zero or else copy
+        if(i>=callerSize) {
+           machine->mainMemory[startAddrChild+i] = 0;
+        } else {
+           machine->mainMemory[startAddrChild+i] = machine->mainMemory[startAddrcaller+i];
+        }
     }
 
     numPagesAllocated += numPages;

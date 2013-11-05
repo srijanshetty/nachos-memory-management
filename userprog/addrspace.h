@@ -26,6 +26,8 @@ class AddrSpace {
 
     AddrSpace (AddrSpace *parentSpace);	// Used by fork
 
+    AddrSpace (AddrSpace *callerSpace, int sharedSize);	// Used by SHM 
+
     ~AddrSpace();			// De-allocate an address space
 
     void InitRegisters();		// Initialize user-level CPU registers,

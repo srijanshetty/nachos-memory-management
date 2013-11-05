@@ -40,6 +40,7 @@ class TranslationEntry {
 			// page is referenced or modified.
     bool dirty;         // This bit is set by the hardware every time the
 			// page is modified.
+    bool shared; // To indicate whether a particular page is shared or not
 };
 
 #endif
