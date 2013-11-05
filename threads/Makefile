@@ -72,9 +72,9 @@ synch.o: ../threads/synch.cc ../threads/copyright.h ../threads/synch.h \
   /usr/lib/gcc/i386-redhat-linux/4.1.2/include/stdarg.h \
   /usr/include/bits/stdio_lim.h /usr/include/bits/sys_errlist.h \
   /usr/include/string.h /usr/include/xlocale.h ../threads/list.h \
-  ../threads/system.h ../threads/scheduler.h ../machine/interrupt.h \
-  ../threads/list.h ../machine/stats.h ../machine/timer.h \
-  ../threads/utility.h
+  ../threads/synchop.h ../threads/system.h ../threads/scheduler.h \
+  ../machine/interrupt.h ../threads/list.h ../machine/stats.h \
+  ../machine/timer.h ../threads/utility.h
 synchlist.o: ../threads/synchlist.cc ../threads/copyright.h \
   ../threads/synchlist.h ../threads/list.h ../threads/utility.h \
   ../machine/sysdep.h ../threads/copyright.h /usr/include/stdio.h \
@@ -88,7 +88,7 @@ synchlist.o: ../threads/synchlist.cc ../threads/copyright.h \
   /usr/lib/gcc/i386-redhat-linux/4.1.2/include/stdarg.h \
   /usr/include/bits/stdio_lim.h /usr/include/bits/sys_errlist.h \
   /usr/include/string.h /usr/include/xlocale.h ../threads/synch.h \
-  ../threads/thread.h
+  ../threads/thread.h ../threads/synchop.h
 system.o: ../threads/system.cc ../threads/copyright.h ../threads/system.h \
   ../threads/utility.h ../machine/sysdep.h ../threads/copyright.h \
   /usr/include/stdio.h /usr/include/features.h /usr/include/sys/cdefs.h \
@@ -116,9 +116,10 @@ thread.o: ../threads/thread.cc ../threads/copyright.h ../threads/thread.h \
   /usr/lib/gcc/i386-redhat-linux/4.1.2/include/stdarg.h \
   /usr/include/bits/stdio_lim.h /usr/include/bits/sys_errlist.h \
   /usr/include/string.h /usr/include/xlocale.h ../threads/switch.h \
-  ../threads/synch.h ../threads/list.h ../threads/system.h \
-  ../threads/scheduler.h ../machine/interrupt.h ../threads/list.h \
-  ../machine/stats.h ../machine/timer.h ../threads/utility.h
+  ../threads/synch.h ../threads/list.h ../threads/synchop.h \
+  ../threads/system.h ../threads/scheduler.h ../machine/interrupt.h \
+  ../threads/list.h ../machine/stats.h ../machine/timer.h \
+  ../threads/utility.h
 utility.o: ../threads/utility.cc ../threads/copyright.h \
   ../threads/utility.h ../machine/sysdep.h ../threads/copyright.h \
   /usr/include/stdio.h /usr/include/features.h /usr/include/sys/cdefs.h \
