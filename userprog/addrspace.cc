@@ -231,11 +231,8 @@ AddrSpace::createSharedPageTable(int sharedSize)
     }
 
     // Now we have to initialize the shared memory pages with zero
-    unsigned startAddr = numPagesAllocated * PageSize;
     unsigned size = numPages * PageSize;
-    for (i=startAddr; i<size; i++) {
-           machine->mainMemory[i] = 0;
-    }
+    bzero(&machine->mainMemory[numPagesAllocated*PageSize], size);
 
     // Increment the number of pages allocated by the number of shared pages
     // allocated right now
