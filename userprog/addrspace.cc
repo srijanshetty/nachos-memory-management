@@ -138,9 +138,10 @@ AddrSpace::AddrSpace(OpenFile *executable)
 AddrSpace::AddrSpace(AddrSpace *parentSpace)
 {
     numPages = parentSpace->GetNumPages();
-    unsigned i, size = numPages * PageSize;
+    countSharedPages = parentSpace->countSharedPages;
+    unsigned i;
 
-    ASSERT(numPages+numPagesAllocated <= NumPhysPages);                // check we're not trying
+    ASSERT(numPages-countSharedPages+numPagesAllocated <= NumPhysPages);        // check we're not trying
                                                                                 // to run anything too big --
                                                                                 // at least until we have
                                                                                 // virtual memory
@@ -163,6 +164,7 @@ AddrSpace::AddrSpace(AddrSpace *parentSpace)
     }
 
     // Copy the contents
+    unsigned size = numPages * PageSize;
     unsigned startAddrParent = parentPageTable[0].physicalPage*PageSize;
     unsigned startAddrChild = numPagesAllocated*PageSize;
     for (i=0; i<size; i++) {
@@ -189,7 +191,7 @@ AddrSpace::createSharedPageTable(int sharedSize)
     if ( !sharedSize % PageSize ) {
         sharedPages ++;
     }
-    countSharedPages = sharedPages;
+    countSharedPages += sharedPages;
 
     // Update the number of pages of the addresspace
     numPages = originalPages + sharedPages;
@@ -214,7 +216,7 @@ AddrSpace::createSharedPageTable(int sharedSize)
         pageTable[i].readOnly = originalPageTable[i].readOnly;  	// if the code segment was entirely on
                                         			// a separate page, we could set its
                                         			// pages to be read-only
-        pageTable[i].shared = FALSE;
+        pageTable[i].shared = originalPageTable[i].shared;
     }
 
     // Now set up the translation entry for the shared memory region
@@ -231,8 +233,8 @@ AddrSpace::createSharedPageTable(int sharedSize)
     // Now we have to initialize the shared memory pages with zero
     unsigned startAddr = numPagesAllocated * PageSize;
     unsigned size = numPages * PageSize;
-    for (i=0; i<size; i++) {
-           machine->mainMemory[startAddr+i] = 0;
+    for (i=startAddr; i<size; i++) {
+           machine->mainMemory[i] = 0;
     }
 
     // Increment the number of pages allocated by the number of shared pages
@@ -243,7 +245,7 @@ AddrSpace::createSharedPageTable(int sharedSize)
     delete originalPageTable;
 
     // return the starting address of the shared Page
-    return startAddr;
+    return originalPages * PageSize;
 }
 
 //----------------------------------------------------------------------
