@@ -126,6 +126,8 @@ AddrSpace::AddrSpace(OpenFile *executable)
 			noffH.initData.size, noffH.initData.inFileAddr);
     }
 
+    // Initialize the sharedPagesCount to zero
+    countSharedPages = 0;
 }
 
 //----------------------------------------------------------------------
@@ -171,45 +173,54 @@ AddrSpace::AddrSpace(AddrSpace *parentSpace)
 }
 
 //----------------------------------------------------------------------
-// This constructor is used to Initialize an address space and allocate
-// memory
+// AddrSpace::createSharedPageTable(int)
+// This function overwrites the page table entry of the caller with a
+// new one which has a shared pages
 //----------------------------------------------------------------------
 
-AddrSpace::AddrSpace(AddrSpace *callerSpace, int sharedSize)
+unsigned 
+AddrSpace::createSharedPageTable(int sharedSize)
 {
-    unsigned sharedPages = sharedSize / PageSize; // compute the number of pages required
+    // Compute the numPages in the originalSpace
+    unsigned originalPages = GetNumPages();
 
-    callerPages = callerSpace->GetNumPages();
-    numPages = callerPages + sharedPages;
-    unsigned i, size = numPages * PageSize;
-    unsigned callerSize = callerPages * PageSize;
+    // Compute the number of sharedPages, round up if needed
+    unsigned sharedPages = sharedSize / PageSize;
+    if ( !sharedSize % PageSize ) {
+        sharedPages ++;
+    }
+    countSharedPages = sharedPages;
 
-    ASSERT(numPages+numPagesAllocated <= NumPhysPages);                // check we're not trying
+    // Update the number of pages of the addresspace
+    numPages = originalPages + sharedPages;
+    unsigned i, k;
+
+    ASSERT(sharedPages+numPagesAllocated <= NumPhysPages);                // check we're not trying
                                                                                 // to run anything too big --
                                                                                 // at least until we have
                                                                                 // virtual memory
 
-    DEBUG('a', "Initializing address space, num pages %d, size %d\n",
-                                        numPages, size);
+    DEBUG('a', "Extending address space , shared pages%d",
+                                        sharedPages);
     // first, set up the translation
-    TranslationEntry* callerPageTable = callerSpace->GetPageTable();
+    TranslationEntry* originalPageTable = GetPageTable();
     pageTable = new TranslationEntry[numPages];
-    for (i = 0; i < callerPages; i++) {
+    for (i = 0; i < originalPages; i++) {
         pageTable[i].virtualPage = i;
-        pageTable[i].physicalPage = i+numPagesAllocated;
-        pageTable[i].valid = callerPageTable[i].valid;
-        pageTable[i].use = callerPageTable[i].use;
-        pageTable[i].dirty = callerPageTable[i].dirty;
-        pageTable[i].readOnly = callerPageTable[i].readOnly;  	// if the code segment was entirely on
+        pageTable[i].physicalPage = originalPageTable[i].physicalPage;
+        pageTable[i].valid = originalPageTable[i].valid;
+        pageTable[i].use = originalPageTable[i].use;
+        pageTable[i].dirty = originalPageTable[i].dirty;
+        pageTable[i].readOnly = originalPageTable[i].readOnly;  	// if the code segment was entirely on
                                         			// a separate page, we could set its
                                         			// pages to be read-only
         pageTable[i].shared = FALSE;
     }
 
     // Now set up the translation entry for the shared memory region
-    for(i = callerPages; i <numPages; ++i) {
+    for(i=originalPages, k=0; i<numPages; ++i, ++k) {
         pageTable[i].virtualPage = i;
-        pageTable[i].physicalPage = i+numPagesAllocated;
+        pageTable[i].physicalPage = k+numPagesAllocated;
         pageTable[i].valid = TRUE;
         pageTable[i].use = FALSE;
         pageTable[i].dirty = FALSE;
@@ -217,19 +228,22 @@ AddrSpace::AddrSpace(AddrSpace *callerSpace, int sharedSize)
         pageTable[i].shared = TRUE; // this is a shared region
     }
 
-    // Copy the contents
-    unsigned startAddrcaller = callerPageTable[0].physicalPage*PageSize;
-    unsigned startAddrChild = numPagesAllocated*PageSize;
+    // Now we have to initialize the shared memory pages with zero
+    unsigned startAddr = numPagesAllocated * PageSize;
+    unsigned size = numPages * PageSize;
     for (i=0; i<size; i++) {
-        // Intizalize the shared memory with zero or else copy
-        if(i>=callerSize) {
-           machine->mainMemory[startAddrChild+i] = 0;
-        } else {
-           machine->mainMemory[startAddrChild+i] = machine->mainMemory[startAddrcaller+i];
-        }
+           machine->mainMemory[startAddr+i] = 0;
     }
 
-    numPagesAllocated += numPages;
+    // Increment the number of pages allocated by the number of shared pages
+    // allocated right now
+    numPagesAllocated += sharedPages;
+
+    // free the originalPageTable
+    delete originalPageTable;
+
+    // return the starting address of the shared Page
+    return startAddr;
 }
 
 //----------------------------------------------------------------------

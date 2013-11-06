@@ -26,8 +26,6 @@ class AddrSpace {
 
     AddrSpace (AddrSpace *parentSpace);	// Used by fork
 
-    AddrSpace (AddrSpace *callerSpace, int sharedSize);	// Used by SHM 
-
     ~AddrSpace();			// De-allocate an address space
 
     void InitRegisters();		// Initialize user-level CPU registers,
@@ -39,6 +37,11 @@ class AddrSpace {
     unsigned GetNumPages();
 
     TranslationEntry* GetPageTable();
+
+    unsigned createSharedPageTable(int sharedSize); // creates a page table with shared
+                                    // pages
+
+    int countSharedPages; // Keeps a count of the number of sharedPages
 
   private:
     TranslationEntry *pageTable;	// Assume linear page table translation

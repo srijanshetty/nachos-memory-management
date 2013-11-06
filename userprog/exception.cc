@@ -98,6 +98,8 @@ ExceptionHandler(ExceptionType which)
     int whichChild;		// Used in SC_Join
     Thread *child;		// Used by SC_Fork
     unsigned sleeptime;		// Used by SC_Sleep
+    int sharedSize; // Used by SC_ShmAllocate
+    unsigned int sharedMemoryStart; // Used by SC_ShmAllocate
 
     if ((which == SyscallException) && (type == SC_Halt)) {
 	DEBUG('a', "Shutdown, initiated by user program.\n");
@@ -293,6 +295,14 @@ ExceptionHandler(ExceptionType which)
        machine->WriteRegister(PrevPCReg, machine->ReadRegister(PCReg));
        machine->WriteRegister(PCReg, machine->ReadRegister(NextPCReg));
        machine->WriteRegister(NextPCReg, machine->ReadRegister(NextPCReg)+4);
+    } else if ((which == SyscallException) && (type == SC_ShmAllocate)) {
+       sharedSize = machine->ReadRegister(4);
+
+       // create a new Page table with shared pages
+       sharedMemoryStart= currentThread->space->createSharedPageTable(sharedSize);
+
+       // Return the starting address of the shared memory region
+       machine->WriteRegister(2, sharedMemoryStart);
     } else {
 	printf("Unexpected user mode exception %d %d\n", which, type);
 	ASSERT(FALSE);
