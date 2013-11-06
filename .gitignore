@@ -16,6 +16,9 @@
 
 # Extra file
 test/temp
+test/shm
+test/vmtest1
+test/vmtest2
 userprog/nachos
 test/forkjoin
 test/testregPA

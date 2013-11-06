@@ -139,39 +139,51 @@ AddrSpace::AddrSpace(AddrSpace *parentSpace)
 {
     numPages = parentSpace->GetNumPages();
     countSharedPages = parentSpace->countSharedPages;
-    unsigned i;
+    unsigned i,j, k;
 
     ASSERT(numPages-countSharedPages+numPagesAllocated <= NumPhysPages);        // check we're not trying
                                                                                 // to run anything too big --
                                                                                 // at least until we have
                                                                                 // virtual memory
 
-    DEBUG('a', "Initializing address space, num pages %d, size %d\n",
-                                        numPages, size);
+    DEBUG('a', "Initializing address space, num pages %d, shared %d\n",
+                                        numPages-countSharedPages, countSharedPages);
     // first, set up the translation
     TranslationEntry* parentPageTable = parentSpace->GetPageTable();
     pageTable = new TranslationEntry[numPages];
-    for (i = 0; i < numPages; i++) {
+    for (i = 0, k = 0; i < numPages; i++) {
+        // Allocate a physical page only if it's not shared
+        if(parentPageTable[i].shared == TRUE){
+            pageTable[i].physicalPage = parentPageTable[i].physicalPage;
+        } else {
+            pageTable[i].physicalPage = k+numPagesAllocated;
+            ++k;
+        }
+
         pageTable[i].virtualPage = i;
-        pageTable[i].physicalPage = i+numPagesAllocated;
         pageTable[i].valid = parentPageTable[i].valid;
         pageTable[i].use = parentPageTable[i].use;
         pageTable[i].dirty = parentPageTable[i].dirty;
         pageTable[i].readOnly = parentPageTable[i].readOnly;  	// if the code segment was entirely on
                                         			// a separate page, we could set its
                                         			// pages to be read-only
-        pageTable[i].shared= FALSE;
+        pageTable[i].shared= parentPageTable[i].shared;
     }
 
     // Copy the contents
-    unsigned size = numPages * PageSize;
-    unsigned startAddrParent = parentPageTable[0].physicalPage*PageSize;
-    unsigned startAddrChild = numPagesAllocated*PageSize;
-    for (i=0; i<size; i++) {
-       machine->mainMemory[startAddrChild+i] = machine->mainMemory[startAddrParent+i];
+    unsigned startAddrParent, startAddrChild;
+    for (i=0; i<numPages; i++) {
+        // If the current page is not shared then copy
+        if(!pageTable[i].shared){
+            startAddrParent = parentPageTable[i].physicalPage * PageSize;
+            startAddrChild = pageTable[i].physicalPage * PageSize;
+            for(j=0; j<PageSize;++j) {
+                machine->mainMemory[startAddrChild+j] = machine->mainMemory[startAddrParent+j];
+            }
+        }
     }
 
-    numPagesAllocated += numPages;
+    numPagesAllocated += numPages-countSharedPages;
 }
 
 //----------------------------------------------------------------------
@@ -188,7 +200,7 @@ AddrSpace::createSharedPageTable(int sharedSize)
 
     // Compute the number of sharedPages, round up if needed
     unsigned sharedPages = sharedSize / PageSize;
-    if ( !sharedSize % PageSize ) {
+    if ( sharedSize % PageSize ) {
         sharedPages ++;
     }
     countSharedPages += sharedPages;
@@ -202,7 +214,7 @@ AddrSpace::createSharedPageTable(int sharedSize)
                                                                                 // at least until we have
                                                                                 // virtual memory
 
-    DEBUG('a', "Extending address space , shared pages%d",
+    DEBUG('a', "Extending address space , shared pages %d\n",
                                         sharedPages);
     // first, set up the translation
     TranslationEntry* originalPageTable = GetPageTable();
@@ -237,6 +249,10 @@ AddrSpace::createSharedPageTable(int sharedSize)
     // Increment the number of pages allocated by the number of shared pages
     // allocated right now
     numPagesAllocated += sharedPages;
+
+    // Set up the stuff for machine correctly
+    machine->pageTable = pageTable;
+    machine->pageTableSize = numPages * PageSize;
 
     // free the originalPageTable
     delete originalPageTable;

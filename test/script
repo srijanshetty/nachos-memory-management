@@ -11,22 +11,19 @@ SECTIONS
      etext  =  .;
      _etext  =  .;
   }
-  .rdata  . : {
-    *(.rdata)
-  }
    _fdata = .;
   .data  . : {
+    *(.sdata)
+    *(.rdata)
     *(.data)
     CONSTRUCTORS
   }
    edata  =  .;
    _edata  =  .;
    _fbss = .;
-  .sbss  . : {
+  .bss  . : {
     *(.sbss)
     *(.scommon)
-  }
-  .bss  . : {
     *(.bss)
     *(COMMON)
   }
