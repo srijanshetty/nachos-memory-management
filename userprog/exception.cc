@@ -21,11 +21,14 @@
 // All rights reserved.  See copyright.h for copyright notice and limitation 
 // of liability and disclaimer of warranty provisions.
 
+#define MAX_SEMAPHORE_COUNT 1000
+
 #include "copyright.h"
 #include "system.h"
 #include "syscall.h"
 #include "console.h"
 #include "synch.h"
+#include "synchop.h"
 
 //----------------------------------------------------------------------
 // ExceptionHandler
@@ -56,6 +59,11 @@ static void WriteDone(int arg) { writeDone->V(); }
 
 extern void StartProcess (char*);
 
+// A list of the semaphores
+Semaphore *semaphores[MAX_SEMAPHORE_COUNT];
+int semaphore_list[MAX_SEMAPHORE_COUNT];
+int semaphore_count = 0;
+
 void
 ForkStartFunction (int dummy)
 {
@@ -83,7 +91,7 @@ void
 ExceptionHandler(ExceptionType which)
 {
     int type = machine->ReadRegister(2);
-    int memval, vaddr, printval, tempval, exp;
+    int memval, paddr, vaddr, printval, tempval, exp;
     unsigned printvalus;	// Used for printing in hex
     if (!initializedConsoleSemaphores) {
        readAvail = new Semaphore("read avail", 0);
@@ -100,6 +108,10 @@ ExceptionHandler(ExceptionType which)
     unsigned sleeptime;		// Used by SC_Sleep
     int sharedSize; // Used by SC_ShmAllocate
     unsigned sharedMemoryStart; // Used by SC_ShmAllocate
+    int key, id;  //used by SC_SemGet
+    int returnValue; // used by SC_SemOp
+    int adj; //used by SC_SemOp
+    int op; // use by SC_SemCtl
 
     if ((which == SyscallException) && (type == SC_Halt)) {
 	DEBUG('a', "Shutdown, initiated by user program.\n");
@@ -308,6 +320,84 @@ ExceptionHandler(ExceptionType which)
 
        // Return the starting address of the shared memory region
        machine->WriteRegister(2, sharedMemoryStart);
+    } else if ((which == SyscallException) && (type == SC_SemGet)) {
+        // Obtain the Key
+        key = machine->ReadRegister(4);
+
+        // Check if the semaphore exists, if so then just return the value
+        // otherwise we will have to create a new semaphore
+        id = -1;
+        for( i = 0; i<semaphore_count; ++i ) {
+            if( semaphore_list[i] == key ) {
+                id = i;
+            }
+        }
+
+        // If the semaphore does not exists then create a new one
+        if ( id == -1 ) {
+            id = semaphore_count;
+            semaphore_list[id] = key;
+            semaphores[id] = new Semaphore("sem", 0);
+            semaphore_count++;
+        }
+
+        // Advance program counters.
+        machine->WriteRegister(PrevPCReg, machine->ReadRegister(PCReg));
+        machine->WriteRegister(PCReg, machine->ReadRegister(NextPCReg));
+        machine->WriteRegister(NextPCReg, machine->ReadRegister(NextPCReg)+4);
+
+        // Return the starting address of the shared memory region
+        machine->WriteRegister(2, id);
+    } else if ((which == SyscallException) && (type == SC_SemOp)) {
+        returnValue = -1;
+        id = machine->ReadRegister(4);
+        adj = machine->ReadRegister(5);
+
+        if ( adj == 1 ){
+            semaphores[id]->P();
+        } else {
+            semaphores[id]->V();
+        }
+
+        // Advance program counters.
+        machine->WriteRegister(PrevPCReg, machine->ReadRegister(PCReg));
+        machine->WriteRegister(PCReg, machine->ReadRegister(NextPCReg));
+        machine->WriteRegister(NextPCReg, machine->ReadRegister(NextPCReg)+4);
+    } else if ((which == SyscallException) && (type == SC_SemCtl)) {
+        // Obtain the passed parameters
+        id = machine->ReadRegister(4);
+        op = machine->ReadRegister(5);
+        vaddr = machine->ReadRegister(6);
+
+        // Here we perform operations according to the given operation
+        if( op == SYNCH_REMOVE ) {
+            // Delete the semaphore and alos remove it from the mapping
+            semaphore_list[id] = -1;
+            delete semaphores[id];
+            returnValue = 0;
+        } else if ( op == SYNCH_GET ) {
+            // Translare the vaddr to a paddr and then return the value of the
+            // semaphore into this address
+            paddr = machine->GetPA(vaddr);
+            machine->mainMemory[paddr] = semaphores[id]->getValue();
+            returnValue = 0;
+        } else if ( op == SYNCH_SET ) {
+            // Translate the vaddr to a paddr and then write the value stored at
+            // that location in to the value of the semaphore
+            paddr = machine->GetPA(vaddr);
+            semaphores[id]->setValue(machine->mainMemory[paddr]);
+            returnValue = 0;
+        } else {
+            returnValue = -1;
+        }
+
+        // Advance program counters.
+        machine->WriteRegister(PrevPCReg, machine->ReadRegister(PCReg));
+        machine->WriteRegister(PCReg, machine->ReadRegister(NextPCReg));
+        machine->WriteRegister(NextPCReg, machine->ReadRegister(NextPCReg)+4);
+
+        // Return the starting address of the shared memory region
+        machine->WriteRegister(2, returnValue);
     } else {
         printf("Unexpected user mode exception %d %d\n", which, type);
         ASSERT(FALSE);
