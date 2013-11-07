@@ -46,6 +46,9 @@ class Semaphore {
     void P();	 // these are the only operations on a semaphore
     void V();	 // they are both *atomic*
     
+    int getValue(); // Returns the semaphore value
+    void setValue(int val); // sets the semaphroe value
+
   private:
     char* name;        // useful for debugging
     int value;         // semaphore value, always >= 0
