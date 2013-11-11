@@ -48,11 +48,11 @@ class Semaphore {
     
     int getValue(); // Returns the semaphore value
     void setValue(int val); // sets the semaphroe value
+    List *queue;       // threads waiting in P() for the value to be > 0
+    int value;         // semaphore value, always >= 0
 
   private:
     char* name;        // useful for debugging
-    int value;         // semaphore value, always >= 0
-    List *queue;       // threads waiting in P() for the value to be > 0
 };
 
 // The following class defines a "lock".  A lock can be BUSY or FREE.
@@ -133,8 +133,15 @@ class Condition {
     void Broadcast(Lock *conditionLock);// the currentThread for all of 
 					// these operations
 
+    // The same operations as defined above but done implemented using a
+    // Semaphore instead of a lock
+    void Wait(Semaphore *cond); 	
+    void Signal(Semaphore *cond);   
+    void Broadcast(Semaphore *cond);
+
   private:
     char* name;
+    int count; // Keeps a count of the number of processes waiting on the condition
     // plus some other stuff you'll need to define
 };
 #endif // SYNCH_H

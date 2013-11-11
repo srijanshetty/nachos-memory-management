@@ -123,8 +123,54 @@ Lock::~Lock() {}
 void Lock::Acquire() {}
 void Lock::Release() {}
 
-Condition::Condition(char* debugName) { }
+Condition::Condition(char* debugName) {
+    count = 0;
+}
+
 Condition::~Condition() { }
 void Condition::Wait(Lock* conditionLock) { ASSERT(FALSE); }
 void Condition::Signal(Lock* conditionLock) { }
 void Condition::Broadcast(Lock* conditionLock) { }
+
+void
+Condition::Wait(Semaphore *condition) {
+    IntStatus oldLevel = interrupt->SetLevel(IntOff);	// disable interrupts
+    
+    count++;
+
+    while (condition->value == 0) { 			// semaphore not available
+        condition->queue->Append((void *)currentThread);	// so go to sleep
+        currentThread->Sleep();
+    } 
+    condition->value--; // semaphore available, 
+						// consume its value
+    count--;
+    
+    (void) interrupt->SetLevel(oldLevel);	// re-enable interrupts
+}
+
+void 
+Condition::Signal(Semaphore *condition) {
+    if(count>0) {
+        condition->V();
+    }
+}
+
+// The idea of Broadcast is that we wake up all the threads which are waiting
+// for Semaphore condition
+void
+Condition::Broadcast(Semaphore *condition) {
+    Thread *thread;
+    IntStatus oldLevel = interrupt->SetLevel(IntOff);
+
+    // Loop through all the threads which are waiting on the Semaphore contion
+    // and then set them ready to run
+    thread = (Thread *)condition->queue->Remove();
+    while(thread != NULL){	   // make thread ready, consuming the V immediately
+        scheduler->ReadyToRun(thread);
+        condition->value++;
+        thread = (Thread *)condition->queue->Remove();
+    }
+
+    (void) interrupt->SetLevel(oldLevel);
+}
