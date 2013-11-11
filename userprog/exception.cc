@@ -22,6 +22,7 @@
 // of liability and disclaimer of warranty provisions.
 
 #define MAX_SEMAPHORE_COUNT 1000
+#define MAX_CV_COUNT 1000
 
 #include "copyright.h"
 #include "system.h"
@@ -63,6 +64,11 @@ extern void StartProcess (char*);
 Semaphore *semaphores[MAX_SEMAPHORE_COUNT];
 int semaphore_list[MAX_SEMAPHORE_COUNT];
 int semaphore_count = 0;
+
+// A list of the cvs 
+Condition *cvs[MAX_CV_COUNT];
+int cv_list[MAX_CV_COUNT];
+int cv_count = 0;
 
 void
 ForkStartFunction (int dummy)
@@ -342,7 +348,7 @@ ExceptionHandler(ExceptionType which)
         
             id = semaphore_count;
             semaphore_list[id] = key;
-            semaphores[id] = new Semaphore("sem", 0);
+            semaphores[id] = new Semaphore("sem", 1);
             semaphore_count++;
 
             (void) interrupt->SetLevel(oldLevel);	// re-enable interrupts
@@ -362,10 +368,12 @@ ExceptionHandler(ExceptionType which)
         // We assusme that the semaphore implementation is a binary semaphore
         // implementation, since P and V are atomic, we needn't disable the
         // interrupts 
-        if ( adj == 1 ){
-            semaphores[id]->P();
-        } else {
-            semaphores[id]->V();
+        if(semaphore_list[id] != -1 && id < semaphore_count) {
+            if ( adj == -1 ){
+                semaphores[id]->P();
+            } else {
+                semaphores[id]->V();
+            }
         }
 
         // Advance program counters.
@@ -380,7 +388,7 @@ ExceptionHandler(ExceptionType which)
         returnValue = -1;
 
         // First check whether the id is valid or not
-        if(semaphore_list[id] ! = -1 && id <semaphore_count) {
+        if(semaphore_list[id] != -1 && id < semaphore_count) {
             if( op == SYNCH_REMOVE ) {
                 semaphore_list[id] = -1;
                 delete semaphores[id];
@@ -389,7 +397,7 @@ ExceptionHandler(ExceptionType which)
                 // Translare the vaddr to a paddr and then return the value of the
                 // semaphore into this address
                 paddr = machine->GetPA(vaddr);
-                if(paddr ! = -1) {
+                if(paddr != -1) {
                     machine->mainMemory[paddr] = semaphores[id]->getValue();
                     returnValue = 0;
                 }
@@ -397,7 +405,7 @@ ExceptionHandler(ExceptionType which)
                 // Translate the vaddr to a paddr and then write the value stored at
                 // that location in to the value of the semaphore
                 paddr = machine->GetPA(vaddr);
-                if(paddr ! = -1) {
+                if(paddr != -1) {
                     IntStatus oldLevel = interrupt->SetLevel(IntOff);	// disable interrupts
                     semaphores[id]->setValue(machine->mainMemory[paddr]);
                     (void) interrupt->SetLevel(oldLevel);	// re-enable interrupts
@@ -413,6 +421,41 @@ ExceptionHandler(ExceptionType which)
 
         // Return the starting address of the shared memory region
         machine->WriteRegister(2, returnValue);
+    } else if ((which == SyscallException) && (type == SC_CondGet)) {
+        // Obtain the Key
+        key = machine->ReadRegister(4);
+
+        // Check if the cv exists, if so then just return the value
+        // otherwise we will have to create a new cv 
+        id = -1;
+        for( i = 0; i<cv_count; ++i ) {
+            if( cv_list[i] == key ) {
+                id = i;
+            }
+        }
+
+        // If we have to create a new cv, we make sure that we disable
+        // interrupts, the reason being that cv_count is a global
+        // variable and so is the cvs array
+        // If the cv does not exists then create a new one
+        if ( id == -1 ) {
+            IntStatus oldLevel = interrupt->SetLevel(IntOff);	// disable interrupts
+        
+            id = cv_count;
+            cv_list[id] = key;
+            cvs[id] = new Condition("cv");
+            cv_count++;
+
+            (void) interrupt->SetLevel(oldLevel);	// re-enable interrupts
+        }
+        
+        // Advance program counters.
+        machine->WriteRegister(PrevPCReg, machine->ReadRegister(PCReg));
+        machine->WriteRegister(PCReg, machine->ReadRegister(NextPCReg));
+        machine->WriteRegister(NextPCReg, machine->ReadRegister(NextPCReg)+4);
+
+        // Return the starting address of the shared memory region
+        machine->WriteRegister(2, id);
     } else {
         printf("Unexpected user mode exception %d %d\n", which, type);
         ASSERT(FALSE);
