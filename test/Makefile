@@ -37,7 +37,7 @@ CPP = /usr/bin/cpp
 INCDIR =-I../userprog -I../threads
 CFLAGS = -G 0 -c $(INCDIR)
 
-all: halt shell matmult sort printtest vectorsum testregPA forkjoin testexec testyield testloop forkjoin_hard testloop1 testloop2 testloop3 testlooplong testloop4 testloop5 vmtest1 vmtest2 shm
+all: halt shell matmult sort printtest vectorsum testregPA forkjoin testexec testyield testloop forkjoin_hard testloop1 testloop2 testloop3 testlooplong testloop4 testloop5 vmtest1 vmtest2 shm sem
 
 start.o: start.s ../userprog/syscall.h
 	$(CPP) $(CPPFLAGS) start.s > strt.s
@@ -96,6 +96,14 @@ vectorsum: vectorsum.o start.o
 	$(LD) $(LDFLAGS) start.o vectorsum.o -o vectorsum.coff
 	../bin/coff2noff vectorsum.coff vectorsum
 
+sem.o: sem.c
+	$(CC) $(INCDIR) -S sem.c -o sem.s
+	$(AS) $(CFLAGS) sem.s -o sem.o
+	rm -f sem.s
+sem: sem.o start.o
+	$(LD) $(LDFLAGS) start.o sem.o -o sem.coff
+	../bin/coff2noff sem.coff sem
+	
 shm.o: shm.c
 	$(CC) $(INCDIR) -S shm.c -o shm.s
 	$(AS) $(CFLAGS) shm.s -o shm.o
@@ -103,7 +111,6 @@ shm.o: shm.c
 shm: shm.o start.o
 	$(LD) $(LDFLAGS) start.o shm.o -o shm.coff
 	../bin/coff2noff shm.coff shm
-	
 testregPA.o: testregPA.c
 	$(CC) $(INCDIR) -S testregPA.c -o testregPA.s
 	$(AS) $(CFLAGS) testregPA.s -o testregPA.o
