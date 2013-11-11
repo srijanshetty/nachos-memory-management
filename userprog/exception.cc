@@ -333,14 +333,21 @@ ExceptionHandler(ExceptionType which)
             }
         }
 
+        // If we have to create a new semaphore, we make sure that we disable
+        // interrupts, the reason being that semaphore_count is a global
+        // variable and so is the semaphores array
         // If the semaphore does not exists then create a new one
         if ( id == -1 ) {
+            IntStatus oldLevel = interrupt->SetLevel(IntOff);	// disable interrupts
+        
             id = semaphore_count;
             semaphore_list[id] = key;
             semaphores[id] = new Semaphore("sem", 0);
             semaphore_count++;
-        }
 
+            (void) interrupt->SetLevel(oldLevel);	// re-enable interrupts
+        }
+        
         // Advance program counters.
         machine->WriteRegister(PrevPCReg, machine->ReadRegister(PCReg));
         machine->WriteRegister(PCReg, machine->ReadRegister(NextPCReg));
@@ -353,6 +360,9 @@ ExceptionHandler(ExceptionType which)
         id = machine->ReadRegister(4);
         adj = machine->ReadRegister(5);
 
+        // We assusme that the semaphore implementation is a binary semaphore
+        // implementation, since P and V are atomic, we needn't disable the
+        // interrupts 
         if ( adj == 1 ){
             semaphores[id]->P();
         } else {
@@ -371,9 +381,14 @@ ExceptionHandler(ExceptionType which)
 
         // Here we perform operations according to the given operation
         if( op == SYNCH_REMOVE ) {
-            // Delete the semaphore and alos remove it from the mapping
+            // Delete the semaphore and alos remove it from the mapping, note
+            // that the interrupts need to be disabled otherwise there is a
+            // possibilty of an inconsistent state over here
+            IntStatus oldLevel = interrupt->SetLevel(IntOff);	// disable interrupts
             semaphore_list[id] = -1;
             delete semaphores[id];
+            (void) interrupt->SetLevel(oldLevel);	// re-enable interrupts
+
             returnValue = 0;
         } else if ( op == SYNCH_GET ) {
             // Translare the vaddr to a paddr and then return the value of the
@@ -385,7 +400,11 @@ ExceptionHandler(ExceptionType which)
             // Translate the vaddr to a paddr and then write the value stored at
             // that location in to the value of the semaphore
             paddr = machine->GetPA(vaddr);
+            
+            IntStatus oldLevel = interrupt->SetLevel(IntOff);	// disable interrupts
             semaphores[id]->setValue(machine->mainMemory[paddr]);
+            (void) interrupt->SetLevel(oldLevel);	// re-enable interrupts
+
             returnValue = 0;
         } else {
             returnValue = -1;
