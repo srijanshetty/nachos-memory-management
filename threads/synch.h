@@ -135,9 +135,11 @@ class Condition {
 
     // The same operations as defined above but done implemented using a
     // Semaphore instead of a lock
-    void Wait(Semaphore *cond); 	
-    void Signal(Semaphore *cond);   
-    void Broadcast(Semaphore *cond);
+    void Wait(Semaphore *mutex); 	
+    void Signal();   
+    void Broadcast();
+
+    Semaphore condition; // The condition on which the CV waits
 
   private:
     char* name;

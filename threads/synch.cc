@@ -124,6 +124,7 @@ void Lock::Acquire() {}
 void Lock::Release() {}
 
 Condition::Condition(char* debugName) {
+    condition = new Semaphore("cond", 0);
     count = 0;
 }
 
@@ -133,33 +134,32 @@ void Condition::Signal(Lock* conditionLock) { }
 void Condition::Broadcast(Lock* conditionLock) { }
 
 void
-Condition::Wait(Semaphore *condition) {
-    IntStatus oldLevel = interrupt->SetLevel(IntOff);	// disable interrupts
-    
+Condition::Wait(Semaphore *mutex) {
+    // In a wait implementation of a CV, we have to release the mutex which is
+    // passed and then the thread has to wait on an internal condition
+    // semaphore, we also have to keep count of the number of threads which are
+    // waiting on this condition
     count++;
-
-    while (condition->value == 0) { 			// semaphore not available
-        condition->queue->Append((void *)currentThread);	// so go to sleep
-        currentThread->Sleep();
-    } 
-    condition->value--; // semaphore available, 
-						// consume its value
+    mutex->V();
+    condition->P();
+    mutex->P();
     count--;
-    
-    (void) interrupt->SetLevel(oldLevel);	// re-enable interrupts
 }
 
+// We are following signal and continue protocol, so essentially the signal just
+// signals the condition and moves on
 void 
-Condition::Signal(Semaphore *condition) {
-    if(count>0) {
+Condition::Signal() {
+    if(count > 0) {
         condition->V();
     }
 }
 
-// The idea of Broadcast is that we wake up all the threads which are waiting
-// for Semaphore condition
+// Broadcast wakes up all processes in the waiting queue of condition, but
+// before it can do so, it has to disable interrupts so that after the operation
+// it can be in a consistent state
 void
-Condition::Broadcast(Semaphore *condition) {
+Condition::Broadcast() {
     Thread *thread;
     IntStatus oldLevel = interrupt->SetLevel(IntOff);
 
