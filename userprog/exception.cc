@@ -356,7 +356,6 @@ ExceptionHandler(ExceptionType which)
         // Return the starting address of the shared memory region
         machine->WriteRegister(2, id);
     } else if ((which == SyscallException) && (type == SC_SemOp)) {
-        returnValue = -1;
         id = machine->ReadRegister(4);
         adj = machine->ReadRegister(5);
 
@@ -378,37 +377,34 @@ ExceptionHandler(ExceptionType which)
         id = machine->ReadRegister(4);
         op = machine->ReadRegister(5);
         vaddr = machine->ReadRegister(6);
+        returnValue = -1;
 
-        // Here we perform operations according to the given operation
-        if( op == SYNCH_REMOVE ) {
-            // Delete the semaphore and alos remove it from the mapping, note
-            // that the interrupts need to be disabled otherwise there is a
-            // possibilty of an inconsistent state over here
-            IntStatus oldLevel = interrupt->SetLevel(IntOff);	// disable interrupts
-            semaphore_list[id] = -1;
-            delete semaphores[id];
-            (void) interrupt->SetLevel(oldLevel);	// re-enable interrupts
-
-            returnValue = 0;
-        } else if ( op == SYNCH_GET ) {
-            // Translare the vaddr to a paddr and then return the value of the
-            // semaphore into this address
-            paddr = machine->GetPA(vaddr);
-            machine->mainMemory[paddr] = semaphores[id]->getValue();
-            returnValue = 0;
-        } else if ( op == SYNCH_SET ) {
-            // Translate the vaddr to a paddr and then write the value stored at
-            // that location in to the value of the semaphore
-            paddr = machine->GetPA(vaddr);
-            
-            IntStatus oldLevel = interrupt->SetLevel(IntOff);	// disable interrupts
-            semaphores[id]->setValue(machine->mainMemory[paddr]);
-            (void) interrupt->SetLevel(oldLevel);	// re-enable interrupts
-
-            returnValue = 0;
-        } else {
-            returnValue = -1;
-        }
+        // First check whether the id is valid or not
+        if(semaphore_list[id] ! = -1 && id <semaphore_count) {
+            if( op == SYNCH_REMOVE ) {
+                semaphore_list[id] = -1;
+                delete semaphores[id];
+                returnValue = 0;
+            } else if ( op == SYNCH_GET ) {
+                // Translare the vaddr to a paddr and then return the value of the
+                // semaphore into this address
+                paddr = machine->GetPA(vaddr);
+                if(paddr ! = -1) {
+                    machine->mainMemory[paddr] = semaphores[id]->getValue();
+                    returnValue = 0;
+                }
+            } else if ( op == SYNCH_SET ) {
+                // Translate the vaddr to a paddr and then write the value stored at
+                // that location in to the value of the semaphore
+                paddr = machine->GetPA(vaddr);
+                if(paddr ! = -1) {
+                    IntStatus oldLevel = interrupt->SetLevel(IntOff);	// disable interrupts
+                    semaphores[id]->setValue(machine->mainMemory[paddr]);
+                    (void) interrupt->SetLevel(oldLevel);	// re-enable interrupts
+                    returnValue = 0;
+                }
+            }
+        } 
 
         // Advance program counters.
         machine->WriteRegister(PrevPCReg, machine->ReadRegister(PCReg));
