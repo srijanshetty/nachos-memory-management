@@ -37,7 +37,7 @@ CPP = /usr/bin/cpp
 INCDIR =-I../userprog -I../threads
 CFLAGS = -G 0 -c $(INCDIR)
 
-all: halt shell matmult sort printtest vectorsum testregPA forkjoin testexec testyield testloop forkjoin_hard testloop1 testloop2 testloop3 testlooplong testloop4 testloop5 vmtest1 vmtest2 shm sem
+all: halt shell matmult sort printtest vectorsum testregPA forkjoin testexec testyield testloop forkjoin_hard testloop1 testloop2 testloop3 testlooplong testloop4 testloop5 vmtest1 vmtest2 shm sem1 sem2 sem3
 
 start.o: start.s ../userprog/syscall.h
 	$(CPP) $(CPPFLAGS) start.s > strt.s
@@ -96,14 +96,30 @@ vectorsum: vectorsum.o start.o
 	$(LD) $(LDFLAGS) start.o vectorsum.o -o vectorsum.coff
 	../bin/coff2noff vectorsum.coff vectorsum
 
-sem.o: sem.c
-	$(CC) $(INCDIR) -S sem.c -o sem.s
-	$(AS) $(CFLAGS) sem.s -o sem.o
-	rm -f sem.s
-sem: sem.o start.o
-	$(LD) $(LDFLAGS) start.o sem.o -o sem.coff
-	../bin/coff2noff sem.coff sem
+sem1.o: sem1.c
+	$(CC) $(INCDIR) -S sem1.c -o sem1.s
+	$(AS) $(CFLAGS) sem1.s -o sem1.o
+	rm -f sem1.s
+sem1: sem1.o start.o
+	$(LD) $(LDFLAGS) start.o sem1.o -o sem1.coff
+	../bin/coff2noff sem1.coff sem1
 	
+sem2.o: sem2.c
+	$(CC) $(INCDIR) -S sem2.c -o sem2.s
+	$(AS) $(CFLAGS) sem2.s -o sem2.o
+	rm -f sem2.s
+sem2: sem2.o start.o
+	$(LD) $(LDFLAGS) start.o sem2.o -o sem2.coff
+	../bin/coff2noff sem2.coff sem2
+
+sem3.o: sem3.c
+	$(CC) $(INCDIR) -S sem3.c -o sem3.s
+	$(AS) $(CFLAGS) sem3.s -o sem3.o
+	rm -f sem3.s
+sem3: sem3.o start.o
+	$(LD) $(LDFLAGS) start.o sem3.o -o sem3.coff
+	../bin/coff2noff sem3.coff sem3
+
 shm.o: shm.c
 	$(CC) $(INCDIR) -S shm.c -o shm.s
 	$(AS) $(CFLAGS) shm.s -o shm.o
