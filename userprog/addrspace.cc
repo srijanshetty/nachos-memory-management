@@ -147,6 +147,9 @@ AddrSpace::AddrSpace(AddrSpace *parentSpace)
     numPages = parentSpace->GetNumPages();
     countSharedPages = parentSpace->countSharedPages;
     validPages = parentSpace->validPages;
+    
+    // Now we copy the executable name of the parentSpace to the childSpace
+    strcpy(filename, parentSpace->filename);
     unsigned i,j, k;
 
     ASSERT(validPages-countSharedPages+numPagesAllocated <= NumPhysPages);        // check we're not trying
