@@ -8,10 +8,6 @@ main()
     if (x == 0) {
         PrintChar('\n');
         PrintInt(GetPA((unsigned)&array[0]));
-        PrintInt(GetPA((unsigned)&array[0]));
-        PrintInt(GetPA((unsigned)&array[0]));
-        PrintInt(GetPA((unsigned)&array[0]));
-        PrintInt(GetPA((unsigned)&array[0]));
         Exit(0);
     } else {
         Join(x);

@@ -279,6 +279,7 @@ Machine::Translate(int virtAddr, int* physAddr, int size, bool writing)
 
             // delete the opened executable
             delete executable;
+            return PageFaultException;
         }
     } else {
         for (entry = NULL, i = 0; i < TLBSize; i++)

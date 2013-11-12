@@ -498,6 +498,8 @@ ExceptionHandler(ExceptionType which)
 
         // Return the starting address of the shared memory region
         machine->WriteRegister(2, returnValue);
+    } else if (which == PageFaultException)  {
+        stats->numPageFaults++;
     } else {
         printf("Unexpected user mode exception %d %d\n", which, type);
         ASSERT(FALSE);
