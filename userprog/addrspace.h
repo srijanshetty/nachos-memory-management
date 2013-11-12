@@ -47,7 +47,7 @@ class AddrSpace {
 
     OpenFile *executable;
     NoffHeader noffH; // This is the noffheader which stores information
-    char *filename; // This is a pointer to the name of the file
+    char filename[300]; // This is a pointer to the name of the file
 
   private:
     TranslationEntry *pageTable;	// Assume linear page table translation

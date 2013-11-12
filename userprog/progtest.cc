@@ -39,8 +39,13 @@ StartProcess(char *filename)
         return;
     }
 
+    // Create a new address space and pass it the name of the executable
     space = new AddrSpace(executable);    
+    strcpy(space->filename, filename);
+
     currentThread->space = space;
+
+    delete executable; // close the file
 
     space->InitRegisters();		// set the initial register values
     space->RestoreState();		// load page table register

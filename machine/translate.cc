@@ -33,6 +33,7 @@
 #include "machine.h"
 #include "addrspace.h"
 #include "system.h"
+#include "filesys.h"
 
 // Routines for converting Words and Short Words to and from the
 // simulated machine's format of little endian.  These end up
@@ -191,6 +192,7 @@ Machine::Translate(int virtAddr, int* physAddr, int size, bool writing)
     TranslationEntry *entry;
     unsigned int pageFrame;
     int flag = 0;
+    unsigned int numPages = currentThread->space->GetNumPages();
 
     DEBUG('a', "\tTranslate 0x%x, %s: \n\t", virtAddr, writing ? "write" : "read");
 
@@ -215,7 +217,7 @@ Machine::Translate(int virtAddr, int* physAddr, int size, bool writing)
                     virtAddr, pageTableSize);
             return AddressErrorException;
         } else if (!pageTable[vpn].valid) {
-            if(currentThread->space->validPages < currentThread->space->GetNumPages()) {
+            if(currentThread->space->validPages < numPages) {
                 // In this case we have to perform demand paging whose code is
                 // given below
                 flag = 1;
@@ -229,11 +231,11 @@ Machine::Translate(int virtAddr, int* physAddr, int size, bool writing)
 
         // Demand Paging
         if(flag) {
-            // here we handle page faults
-            OpenFile *executable = currentThread->space->executable;
+            // Open the file while is to be loaded into memory
+            OpenFile *executable = fileSystem->Open(currentThread->space->filename);
             NoffHeader noffH = currentThread->space->noffH;
-            unsigned int numPages = currentThread->space->GetNumPages();
             unsigned int size = numPages * PageSize;
+            unsigned int readSize = PageSize;
 
             ASSERT(numPagesAllocated+1 <= NumPhysPages);		// check we're not trying
                                                                     // to run anything too big --
@@ -250,41 +252,22 @@ Machine::Translate(int virtAddr, int* physAddr, int size, bool writing)
             // zero out this particular page
             bzero(&machine->mainMemory[numPagesAllocated*PageSize], PageSize);
 
+            // Now copy the corresponding area from memory
             if( vpn == (numPages - 1) ) {
-                executable->ReadAt(&(machine->mainMemory[pageFrame * PageSize]),
-                        (size - vpn * PageSize), noffH.code.inFileAddr + vpn*PageSize);
-            } else {
-                executable->ReadAt(&(machine->mainMemory[pageFrame * PageSize]),
-                        PageSize, noffH.code.inFileAddr + vpn * PageSize);
+                readSize = size - vpn * PageSize;
             }
 
+            executable->ReadAt(&(machine->mainMemory[pageFrame * PageSize]),
+                    readSize, noffH.code.inFileAddr + vpn*PageSize);
+
+            // Update the number of pages allocated
             numPagesAllocated++;
+
+            // The number of valid pages of this thread has increased
+            currentThread->space->validPages++;
+
+            // Mark this pagetable entry as valid
             entry->valid = TRUE;
-
-            /*
-            // then, copy in the code and data segments into memory
-            if (noffH.code.size > 0) {
-            DEBUG('a', "Initializing code segment, at 0x%x, size %d\n", 
-            noffH.code.virtualAddr, noffH.code.size);
-            vpn = noffH.code.virtualAddr/PageSize;
-            offset = noffH.code.virtualAddr%PageSize;
-            entry = &pageTable[vpn];
-            pageFrame = entry->physicalPage;
-            executable->ReadAt(&(machine->mainMemory[pageFrame * PageSize + offset]),
-            noffH.code.size, noffH.code.inFileAddr);
-            }
-            if (noffH.initData.size > 0) {
-            DEBUG('a', "Initializing data segment, at 0x%x, size %d\n", 
-            noffH.initData.virtualAddr, noffH.initData.size);
-            vpn = noffH.initData.virtualAddr/PageSize;
-            offset = noffH.initData.virtualAddr%PageSize;
-            entry = &pageTable[vpn];
-            pageFrame = entry->physicalPage;
-            executable->ReadAt(&(machine->mainMemory[pageFrame * PageSize + offset]),
-            noffH.initData.size, noffH.initData.inFileAddr);
-            }
-
-            */
         }
     } else {
         for (entry = NULL, i = 0; i < TLBSize; i++)
