@@ -15,6 +15,7 @@
 
 #include "copyright.h"
 #include "filesys.h"
+#include "noff.h"
 
 #define UserStackSize		1024 	// increase this as necessary!
 
@@ -43,6 +44,8 @@ class AddrSpace {
 
     int countSharedPages; // Keeps a count of the number of sharedPages
     int validPages; // a count of the valid pages of the addressSpace
+    OpenFile *executable; // a copy of the executable
+    NoffHeader noffH; // This is the noffheader which stores information
 
   private:
     TranslationEntry *pageTable;	// Assume linear page table translation
