@@ -61,9 +61,11 @@ AddrSpace::AddrSpace(OpenFile *executable)
 {
     NoffHeader noffH;
     unsigned int i, size;
+    /*
     unsigned vpn, offset;
     TranslationEntry *entry;
     unsigned int pageFrame;
+    */
 
     executable->ReadAt((char *)&noffH, sizeof(noffH), 0);
     if ((noffH.noffMagic != NOFFMAGIC) && 
@@ -76,6 +78,7 @@ AddrSpace::AddrSpace(OpenFile *executable)
 			+ UserStackSize;	// we need to increase the size
 						// to leave room for the stack
     numPages = divRoundUp(size, PageSize);
+    /*
     size = numPages * PageSize;
 
     ASSERT(numPages+numPagesAllocated <= NumPhysPages);		// check we're not trying
@@ -83,21 +86,24 @@ AddrSpace::AddrSpace(OpenFile *executable)
 										// at least until we have
 										// virtual memory
 
-    DEBUG('a', "Initializing address space, num pages %d, size %d\n", 
+                                        */
+    DEBUG('a', "Initializing address space, num pages %d, size %d\n valid pages 0", 
 					numPages, size);
 // first, set up the translation 
     pageTable = new TranslationEntry[numPages];
     for (i = 0; i < numPages; i++) {
-	pageTable[i].virtualPage = i;
-	pageTable[i].physicalPage = i+numPagesAllocated;
-	pageTable[i].valid = TRUE;
-	pageTable[i].use = FALSE;
-	pageTable[i].dirty = FALSE;
-	pageTable[i].readOnly = FALSE;  // if the code segment was entirely on 
-					// a separate page, we could set its 
-					// pages to be read-only
-	pageTable[i].shared= FALSE;
+        pageTable[i].virtualPage = i;
+        pageTable[i].physicalPage = -1;
+        pageTable[i].valid = FALSE;
+        pageTable[i].use = FALSE;
+        pageTable[i].dirty = FALSE;
+        pageTable[i].readOnly = FALSE;  // if the code segment was entirely on 
+        // a separate page, we could set its 
+        // pages to be read-only
+        pageTable[i].shared= FALSE;
     }
+
+    /*
 // zero out the entire address space, to zero the unitialized data segment 
 // and the stack segment
     bzero(&machine->mainMemory[numPagesAllocated*PageSize], size);
@@ -126,8 +132,12 @@ AddrSpace::AddrSpace(OpenFile *executable)
 			noffH.initData.size, noffH.initData.inFileAddr);
     }
 
-    // Initialize the sharedPagesCount to zero
+    */
+
+    // Initially the number of valid pages and the number of shared pages is
+    // zero
     countSharedPages = 0;
+    validPages = 0;
 }
 
 //----------------------------------------------------------------------
