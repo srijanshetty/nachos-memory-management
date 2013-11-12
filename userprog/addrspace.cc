@@ -74,7 +74,7 @@ AddrSpace::AddrSpace(OpenFile *program)
 						// to leave room for the stack
     numPages = divRoundUp(size, PageSize);
 
-    DEBUG('a', "Initializing address space, num pages %d, size %d, valid pages 0\n", 
+    DEBUG('A', "Initializing address space, num pages %d, size %d, valid pages 0\n", 
 					numPages, size);
 // first, set up the translation 
     pageTable = new TranslationEntry[numPages];

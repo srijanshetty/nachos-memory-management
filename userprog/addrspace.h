@@ -44,8 +44,10 @@ class AddrSpace {
 
     int countSharedPages; // Keeps a count of the number of sharedPages
     int validPages; // a count of the valid pages of the addressSpace
-    OpenFile *executable; // a copy of the executable
+
+    OpenFile *executable;
     NoffHeader noffH; // This is the noffheader which stores information
+    char *filename; // This is a pointer to the name of the file
 
   private:
     TranslationEntry *pageTable;	// Assume linear page table translation

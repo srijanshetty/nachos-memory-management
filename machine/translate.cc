@@ -190,8 +190,9 @@ Machine::Translate(int virtAddr, int* physAddr, int size, bool writing)
     unsigned int vpn, offset;
     TranslationEntry *entry;
     unsigned int pageFrame;
+    int flag = 0;
 
-    DEBUG('a', "\tTranslate 0x%x, %s: ", virtAddr, writing ? "write" : "read");
+    DEBUG('a', "\tTranslate 0x%x, %s: \n\t", virtAddr, writing ? "write" : "read");
 
     // check for alignment errors
     if (((size == 4) && (virtAddr & 0x3)) || ((size == 2) && (virtAddr & 0x1))){
@@ -214,26 +215,53 @@ Machine::Translate(int virtAddr, int* physAddr, int size, bool writing)
                     virtAddr, pageTableSize);
             return AddressErrorException;
         } else if (!pageTable[vpn].valid) {
-            DEBUG('a', "virtual page # %d too large for page table size %d!\n", 
-                    virtAddr, pageTableSize);
-            return PageFaultException;
+            if(currentThread->space->validPages < currentThread->space->GetNumPages()) {
+                // In this case we have to perform demand paging whose code is
+                // given below
+                flag = 1;
+            } else {
+                DEBUG('a', "virtual page # %d too large for page table size %d!\n", 
+                        virtAddr, pageTableSize);
+                return PageFaultException;
+            }
+        }
+        entry = &pageTable[vpn];
+
+        // Demand Paging
+        if(flag) {
+            // here we handle page faults
+            OpenFile *executable = currentThread->space->executable;
+            NoffHeader noffH = currentThread->space->noffH;
+            unsigned int numPages = currentThread->space->GetNumPages();
+            unsigned int size = numPages * PageSize;
+
+            ASSERT(numPagesAllocated+1 <= NumPhysPages);		// check we're not trying
+                                                                    // to run anything too big --
+                                                                    // at least until we have
+                                                                    // virtual memory
+
+            DEBUG('A', "Allocating physical page %d\n", numPagesAllocated);
+            DEBUG('A', "\tVPN %d virtualaddress 0x%d\n", vpn, virtAddr);
+
+            // Increment the number of pages allocated
+            entry->physicalPage = numPagesAllocated;
+            pageFrame = entry->physicalPage;
+
+            // zero out this particular page
+            bzero(&machine->mainMemory[numPagesAllocated*PageSize], PageSize);
+
+            if( vpn == (numPages - 1) ) {
+                executable->ReadAt(&(machine->mainMemory[pageFrame * PageSize]),
+                        (size - vpn * PageSize), noffH.code.inFileAddr + vpn*PageSize);
+            } else {
+                executable->ReadAt(&(machine->mainMemory[pageFrame * PageSize]),
+                        PageSize, noffH.code.inFileAddr + vpn * PageSize);
+            }
+
+            numPagesAllocated++;
+            entry->valid = TRUE;
+
             /*
-
-               unsigned vpn, offset;
-               TranslationEntry *entry;
-               unsigned int pageFrame;
-
-               size = numPages * PageSize;
-
-               ASSERT(numPages+numPagesAllocated <= NumPhysPages);		// check we're not trying
-            // to run anything too big --
-            // at least until we have
-            // virtual memory
-
-            // zero out the entire address space, to zero the unitialized data segment 
-            // and the stack segment
-            bzero(&machine->mainMemory[numPagesAllocated*PageSize], size);
-
             // then, copy in the code and data segments into memory
             if (noffH.code.size > 0) {
             DEBUG('a', "Initializing code segment, at 0x%x, size %d\n", 
@@ -256,9 +284,8 @@ Machine::Translate(int virtAddr, int* physAddr, int size, bool writing)
             noffH.initData.size, noffH.initData.inFileAddr);
             }
 
-*/
+            */
         }
-        entry = &pageTable[vpn];
     } else {
         for (entry = NULL, i = 0; i < TLBSize; i++)
             if (tlb[i].valid && (tlb[i].virtualPage == vpn)) {
