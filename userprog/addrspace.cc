@@ -56,10 +56,8 @@ SwapHeader (NoffHeader *noffH)
 //	"executable" is the file containing the object code to load into memory
 //----------------------------------------------------------------------
 
-AddrSpace::AddrSpace(OpenFile *program)
+AddrSpace::AddrSpace(OpenFile *executable)
 {
-    // Maintain a pointer to the executable pointed to by this address space
-    executable = program;
     unsigned int i, size;
 
     executable->ReadAt((char *)&noffH, sizeof(noffH), 0);
