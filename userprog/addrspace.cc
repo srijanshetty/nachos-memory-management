@@ -357,3 +357,25 @@ AddrSpace::GetPageTable()
 {
    return pageTable;
 }
+//----------------------------------------------------------------------
+//  AddrSpace::freePages
+//  This frees the pages of the given addressSpace and adds them to the
+//  freedPages list
+//----------------------------------------------------------------------
+
+void AddrSpace::freePages() {
+    // Run through the list of pages of the address space and add all the pages
+    // into the free pages list
+    int i;
+    int *temp;
+    for (i = 0; i < numPages; i++) {
+        if(pageTable[i].valid && !pageTable[i].shared) {
+            temp = new int(pageTable[i].physicalPage);
+            freedPages->Append((void *)temp);
+            DEBUG('A', "Freeing page %d\n", pageTable[i].physicalPage);
+        }
+    }
+
+    // now delete the pageTable for this addrspace
+    delete pageTable;
+}

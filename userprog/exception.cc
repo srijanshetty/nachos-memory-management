@@ -59,6 +59,7 @@ static void ReadAvail(int arg) { readAvail->V(); }
 static void WriteDone(int arg) { writeDone->V(); }
 
 extern void StartProcess (char*);
+extern void StartExec(char*);
 
 // A list of the semaphores
 Semaphore *semaphores[MAX_SEMAPHORE_COUNT];
@@ -150,7 +151,7 @@ ExceptionHandler(ExceptionType which)
           machine->ReadMem(vaddr, 1, &memval);
        }
        buffer[i] = (*(char*)&memval);
-       StartProcess(buffer);
+       StartExec(buffer);
     }
     else if ((which == SyscallException) && (type == SC_Join)) {
        waitpid = machine->ReadRegister(4);

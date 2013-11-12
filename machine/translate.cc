@@ -242,11 +242,19 @@ Machine::Translate(int virtAddr, int* physAddr, int size, bool writing)
                                                                     // at least until we have
                                                                     // virtual memory
 
-            DEBUG('A', "Allocating physical page %d VPN %d virtualaddress 0x%d\n", vpn, virtAddr);
 
-            // Increment the number of pages allocated
-            entry->physicalPage = numPagesAllocated;
+            // We either take the page from the pool of freed pages of we take a
+            // page from the pool of unallocated pages
+            int *physicalPageNumber = (int *)freedPages->Remove();
+            if(physicalPageNumber == NULL) {
+                entry->physicalPage = numPagesAllocated;
+                numPagesAllocated++;   // Update the number of pages allocated
+            } else {
+                entry->physicalPage = *physicalPageNumber;
+            }
             pageFrame = entry->physicalPage;
+
+            DEBUG('A', "Allocating physical page %d VPN %d virtualaddress %d\n", pageFrame, vpn, virtAddr);
 
             // zero out this particular page
             bzero(&machine->mainMemory[pageFrame*PageSize], PageSize);
@@ -259,8 +267,6 @@ Machine::Translate(int virtAddr, int* physAddr, int size, bool writing)
             executable->ReadAt(&(machine->mainMemory[pageFrame * PageSize]),
                     readSize, noffH.code.inFileAddr + vpn*PageSize);
 
-            // Update the number of pages allocated
-            numPagesAllocated++;
 
             // The number of valid pages of this thread has increased
             currentThread->space->validPages++;

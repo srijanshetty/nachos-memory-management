@@ -18,6 +18,7 @@ Interrupt *interrupt;			// interrupt status
 Statistics *stats;			// performance metrics
 Timer *timer;				// the hardware timer device,
 					// for invoking context switches
+List *freedPages;   // A list of pages freed by SC_Exec
 
 unsigned numPagesAllocated;              // number of physical frames allocated
 
@@ -115,6 +116,9 @@ Initialize(int argc, char **argv)
 
     initializedConsoleSemaphores = false;
     numPagesAllocated = 0;
+
+    // A list of number of freedPages
+    freedPages = new List();
 
     schedulingAlgo = NON_PREEMPTIVE_BASE;	// Default
 
