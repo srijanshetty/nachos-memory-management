@@ -139,11 +139,10 @@ class Condition {
     void Signal();   
     void Broadcast();
 
-    Semaphore condition; // The condition on which the CV waits
+    List *queue;       // threads waiting in P() for the value to be > 0
 
   private:
     char* name;
-    int count; // Keeps a count of the number of processes waiting on the condition
     // plus some other stuff you'll need to define
 };
 #endif // SYNCH_H

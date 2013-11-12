@@ -133,26 +133,30 @@ void Condition::Wait(Lock* conditionLock) { ASSERT(FALSE); }
 void Condition::Signal(Lock* conditionLock) { }
 void Condition::Broadcast(Lock* conditionLock) { }
 
+// The reason why we are not disabling interrupts here is because the
+// condtion variable is protected by a mutex so only one thread can exexute
+// this piece of code
 void
 Condition::Wait(Semaphore *mutex) {
     // In a wait implementation of a CV, we have to release the mutex which is
-    // passed and then the thread has to wait on an internal condition
-    // semaphore, we also have to keep count of the number of threads which are
-    // waiting on this condition
-    count++;
+    // passed and then the thread has to sleep, when it is woken it takes back
+    // control of the mutex
     mutex->V();
-    condition->P();
+	queue->Append((void *)currentThread);	// so go to sleep
+    IntStatus oldLevel = interrupt->SetLevel(IntOff);
+	currentThread->Sleep();
+    (void) interrupt->SetLevel(oldLevel);
     mutex->P();
-    count--;
 }
 
 // We are following signal and continue protocol, so essentially the signal just
 // signals the condition and moves on
 void 
 Condition::Signal() {
-    if(count > 0) {
-        condition->V();
-    }
+    // Remove a thread and make it readyToRun
+    thread = (Thread *)queue->Remove();
+    if (thread != NULL)	
+        scheduler->ReadyToRun(thread);
 }
 
 // Broadcast wakes up all processes in the waiting queue of condition, but
@@ -163,13 +167,11 @@ Condition::Broadcast() {
     Thread *thread;
     IntStatus oldLevel = interrupt->SetLevel(IntOff);
 
-    // Loop through all the threads which are waiting on the Semaphore contion
-    // and then set them ready to run
-    thread = (Thread *)condition->queue->Remove();
-    while(thread != NULL){	   // make thread ready, consuming the V immediately
+    // Remove the threads from the queue and make them ready to run
+    thread = (Thread *)queue->Remove();
+    while(thread != NULL){
         scheduler->ReadyToRun(thread);
-        condition->value++;
-        thread = (Thread *)condition->queue->Remove();
+        thread = (Thread *)queue->Remove();
     }
 
     (void) interrupt->SetLevel(oldLevel);
