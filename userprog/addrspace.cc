@@ -149,25 +149,33 @@ AddrSpace::AddrSpace(AddrSpace *parentSpace)
 {
     numPages = parentSpace->GetNumPages();
     countSharedPages = parentSpace->countSharedPages;
+    validPages = parentSpace->validPages;
     unsigned i,j, k;
 
-    ASSERT(numPages-countSharedPages+numPagesAllocated <= NumPhysPages);        // check we're not trying
+    ASSERT(validPages-countSharedPages+numPagesAllocated <= NumPhysPages);        // check we're not trying
                                                                                 // to run anything too big --
                                                                                 // at least until we have
                                                                                 // virtual memory
 
-    DEBUG('a', "Initializing address space, num pages %d, shared %d\n",
-                                        numPages-countSharedPages, countSharedPages);
+    DEBUG('a', "Initializing address space, num pages %d, shared %d, valid %d\n",
+                                        numPages, countSharedPages, valid);
+
     // first, set up the translation
     TranslationEntry* parentPageTable = parentSpace->GetPageTable();
     pageTable = new TranslationEntry[numPages];
     for (i = 0, k = 0; i < numPages; i++) {
-        // Allocate a physical page only if it's not shared
+        // Shared pages have to point to the correct location
         if(parentPageTable[i].shared == TRUE){
             pageTable[i].physicalPage = parentPageTable[i].physicalPage;
         } else {
-            pageTable[i].physicalPage = k+numPagesAllocated;
-            ++k;
+            // Only allocate pages to those pages which are valid, the rest need
+            // not be allocated pages
+            if(parentPageTable[i].valid == TRUE) {
+                pageTable[i].physicalPage = k+numPagesAllocated;
+                ++k;
+            } else {
+                pageTable[i].physicalPage = -1;
+            }
         }
 
         pageTable[i].virtualPage = i;
@@ -183,8 +191,8 @@ AddrSpace::AddrSpace(AddrSpace *parentSpace)
     // Copy the contents
     unsigned startAddrParent, startAddrChild;
     for (i=0; i<numPages; i++) {
-        // If the current page is not shared then copy
-        if(!pageTable[i].shared){
+        // If the page is not shared and the page is valid then only copy
+        if(!pageTable[i].shared && pageTable[i].valid){
             startAddrParent = parentPageTable[i].physicalPage * PageSize;
             startAddrChild = pageTable[i].physicalPage * PageSize;
             for(j=0; j<PageSize;++j) {
@@ -193,7 +201,8 @@ AddrSpace::AddrSpace(AddrSpace *parentSpace)
         }
     }
 
-    numPagesAllocated += numPages-countSharedPages;
+    // Note 'k' here is the number of new pages allocated
+    numPagesAllocated += k;
 }
 
 //----------------------------------------------------------------------
