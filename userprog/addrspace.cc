@@ -259,6 +259,7 @@ AddrSpace::createSharedPageTable(int sharedSize)
     // Increment the number of pages allocated by the number of shared pages
     // allocated right now
     numPagesAllocated += sharedPages;
+    validPages += sharedPages;
 
     // Set up the stuff for machine correctly
     machine->pageTable = pageTable;
