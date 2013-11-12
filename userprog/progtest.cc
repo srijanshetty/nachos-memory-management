@@ -41,9 +41,8 @@ StartProcess(char *filename)
 
     // Create a new address space and pass it the name of the executable
     space = new AddrSpace(executable);    
-    strcpy(space->filename, filename);
-
     currentThread->space = space;
+    strcpy(space->filename, filename);
 
     delete executable; // close the file
 

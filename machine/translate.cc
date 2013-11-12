@@ -242,15 +242,14 @@ Machine::Translate(int virtAddr, int* physAddr, int size, bool writing)
                                                                     // at least until we have
                                                                     // virtual memory
 
-            DEBUG('A', "Allocating physical page %d\n", numPagesAllocated);
-            DEBUG('A', "\tVPN %d virtualaddress 0x%d\n", vpn, virtAddr);
+            DEBUG('A', "Allocating physical page %d VPN %d virtualaddress 0x%d\n", vpn, virtAddr);
 
             // Increment the number of pages allocated
             entry->physicalPage = numPagesAllocated;
             pageFrame = entry->physicalPage;
 
             // zero out this particular page
-            bzero(&machine->mainMemory[numPagesAllocated*PageSize], PageSize);
+            bzero(&machine->mainMemory[pageFrame*PageSize], PageSize);
 
             // Now copy the corresponding area from memory
             if( vpn == (numPages - 1) ) {
@@ -268,6 +267,9 @@ Machine::Translate(int virtAddr, int* physAddr, int size, bool writing)
 
             // Mark this pagetable entry as valid
             entry->valid = TRUE;
+
+            // delete the opened executable
+            delete executable;
         }
     } else {
         for (entry = NULL, i = 0; i < TLBSize; i++)
