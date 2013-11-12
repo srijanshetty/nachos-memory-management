@@ -42,12 +42,14 @@ class AddrSpace {
                                     // pages
 
     int countSharedPages; // Keeps a count of the number of sharedPages
+    int validPages; // a count of the valid pages of the addressSpace
 
   private:
     TranslationEntry *pageTable;	// Assume linear page table translation
 					// for now!
     unsigned int numPages;		// Number of pages in the virtual 
 					// address space
+                    //
 };
 
 #endif // ADDRSPACE_H
