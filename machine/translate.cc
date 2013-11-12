@@ -237,7 +237,10 @@ Machine::Translate(int virtAddr, int* physAddr, int size, bool writing)
             unsigned int size = numPages * PageSize;
             unsigned int readSize = PageSize;
 
-            ASSERT(numPagesAllocated+1 <= NumPhysPages);		// check we're not trying
+            // Increment the numPagesAllocated
+            numPagesAllocated++;
+
+            ASSERT(numPagesAllocated <= NumPhysPages);		// check we're not trying
                                                                     // to run anything too big --
                                                                     // at least until we have
                                                                     // virtual memory
@@ -247,8 +250,8 @@ Machine::Translate(int virtAddr, int* physAddr, int size, bool writing)
             // page from the pool of unallocated pages
             int *physicalPageNumber = (int *)freedPages->Remove();
             if(physicalPageNumber == NULL) {
-                entry->physicalPage = numPagesAllocated;
-                numPagesAllocated++;   // Update the number of pages allocated
+                entry->physicalPage = nextUnallocatedPage;
+                nextUnallocatedPage++;   // Update the number of pages allocated
             } else {
                 entry->physicalPage = *physicalPageNumber;
             }
