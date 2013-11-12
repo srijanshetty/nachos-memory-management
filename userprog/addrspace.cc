@@ -61,11 +61,6 @@ AddrSpace::AddrSpace(OpenFile *executable)
 {
     NoffHeader noffH;
     unsigned int i, size;
-    /*
-    unsigned vpn, offset;
-    TranslationEntry *entry;
-    unsigned int pageFrame;
-    */
 
     executable->ReadAt((char *)&noffH, sizeof(noffH), 0);
     if ((noffH.noffMagic != NOFFMAGIC) && 
@@ -78,16 +73,8 @@ AddrSpace::AddrSpace(OpenFile *executable)
 			+ UserStackSize;	// we need to increase the size
 						// to leave room for the stack
     numPages = divRoundUp(size, PageSize);
-    /*
-    size = numPages * PageSize;
 
-    ASSERT(numPages+numPagesAllocated <= NumPhysPages);		// check we're not trying
-										// to run anything too big --
-										// at least until we have
-										// virtual memory
-
-                                        */
-    DEBUG('a', "Initializing address space, num pages %d, size %d\n valid pages 0", 
+    DEBUG('a', "Initializing address space, num pages %d, size %d, valid pages 0\n", 
 					numPages, size);
 // first, set up the translation 
     pageTable = new TranslationEntry[numPages];
@@ -98,18 +85,32 @@ AddrSpace::AddrSpace(OpenFile *executable)
         pageTable[i].use = FALSE;
         pageTable[i].dirty = FALSE;
         pageTable[i].readOnly = FALSE;  // if the code segment was entirely on 
-        // a separate page, we could set its 
-        // pages to be read-only
+                                        // a separate page, we could set its 
+                                        // pages to be read-only
         pageTable[i].shared= FALSE;
     }
 
+    // Initially the number of valid pages and the number of shared pages is
+    // zero
+    countSharedPages = 0;
+    validPages = 0;
+
     /*
+    unsigned vpn, offset;
+    TranslationEntry *entry;
+    unsigned int pageFrame;
+    
+    size = numPages * PageSize;
+
+    ASSERT(numPages+numPagesAllocated <= NumPhysPages);		// check we're not trying
+										// to run anything too big --
+										// at least until we have
+										// virtual memory
+
 // zero out the entire address space, to zero the unitialized data segment 
 // and the stack segment
     bzero(&machine->mainMemory[numPagesAllocated*PageSize], size);
  
-    numPagesAllocated += numPages;
-
 // then, copy in the code and data segments into memory
     if (noffH.code.size > 0) {
         DEBUG('a', "Initializing code segment, at 0x%x, size %d\n", 
@@ -133,11 +134,6 @@ AddrSpace::AddrSpace(OpenFile *executable)
     }
 
     */
-
-    // Initially the number of valid pages and the number of shared pages is
-    // zero
-    countSharedPages = 0;
-    validPages = 0;
 }
 
 //----------------------------------------------------------------------
@@ -158,7 +154,7 @@ AddrSpace::AddrSpace(AddrSpace *parentSpace)
                                                                                 // virtual memory
 
     DEBUG('a', "Initializing address space, num pages %d, shared %d, valid %d\n",
-                                        numPages, countSharedPages, valid);
+                                        numPages, countSharedPages, validPages);
 
     // first, set up the translation
     TranslationEntry* parentPageTable = parentSpace->GetPageTable();
