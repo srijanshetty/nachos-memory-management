@@ -18,7 +18,6 @@
 #include "copyright.h"
 #include "system.h"
 #include "addrspace.h"
-#include "noff.h"
 
 //----------------------------------------------------------------------
 // SwapHeader
@@ -59,11 +58,7 @@ SwapHeader (NoffHeader *noffH)
 
 AddrSpace::AddrSpace(OpenFile *executable)
 {
-    NoffHeader noffH;
     unsigned int i, size;
-    unsigned vpn, offset;
-    TranslationEntry *entry;
-    unsigned int pageFrame;
 
     executable->ReadAt((char *)&noffH, sizeof(noffH), 0);
     if ((noffH.noffMagic != NOFFMAGIC) && 
@@ -76,58 +71,27 @@ AddrSpace::AddrSpace(OpenFile *executable)
 			+ UserStackSize;	// we need to increase the size
 						// to leave room for the stack
     numPages = divRoundUp(size, PageSize);
-    size = numPages * PageSize;
 
-    ASSERT(numPages+numPagesAllocated <= NumPhysPages);		// check we're not trying
-										// to run anything too big --
-										// at least until we have
-										// virtual memory
-
-    DEBUG('a', "Initializing address space, num pages %d, size %d\n", 
+    DEBUG('A', "Initializing address space, num pages %d, size %d, valid pages 0\n", 
 					numPages, size);
 // first, set up the translation 
     pageTable = new TranslationEntry[numPages];
     for (i = 0; i < numPages; i++) {
-	pageTable[i].virtualPage = i;
-	pageTable[i].physicalPage = i+numPagesAllocated;
-	pageTable[i].valid = TRUE;
-	pageTable[i].use = FALSE;
-	pageTable[i].dirty = FALSE;
-	pageTable[i].readOnly = FALSE;  // if the code segment was entirely on 
-					// a separate page, we could set its 
-					// pages to be read-only
-	pageTable[i].shared= FALSE;
-    }
-// zero out the entire address space, to zero the unitialized data segment 
-// and the stack segment
-    bzero(&machine->mainMemory[numPagesAllocated*PageSize], size);
- 
-    numPagesAllocated += numPages;
-
-// then, copy in the code and data segments into memory
-    if (noffH.code.size > 0) {
-        DEBUG('a', "Initializing code segment, at 0x%x, size %d\n", 
-			noffH.code.virtualAddr, noffH.code.size);
-        vpn = noffH.code.virtualAddr/PageSize;
-        offset = noffH.code.virtualAddr%PageSize;
-        entry = &pageTable[vpn];
-        pageFrame = entry->physicalPage;
-        executable->ReadAt(&(machine->mainMemory[pageFrame * PageSize + offset]),
-			noffH.code.size, noffH.code.inFileAddr);
-    }
-    if (noffH.initData.size > 0) {
-        DEBUG('a', "Initializing data segment, at 0x%x, size %d\n", 
-			noffH.initData.virtualAddr, noffH.initData.size);
-        vpn = noffH.initData.virtualAddr/PageSize;
-        offset = noffH.initData.virtualAddr%PageSize;
-        entry = &pageTable[vpn];
-        pageFrame = entry->physicalPage;
-        executable->ReadAt(&(machine->mainMemory[pageFrame * PageSize + offset]),
-			noffH.initData.size, noffH.initData.inFileAddr);
+        pageTable[i].virtualPage = i;
+        pageTable[i].physicalPage = -1;
+        pageTable[i].valid = FALSE;
+        pageTable[i].use = FALSE;
+        pageTable[i].dirty = FALSE;
+        pageTable[i].readOnly = FALSE;  // if the code segment was entirely on 
+                                        // a separate page, we could set its 
+                                        // pages to be read-only
+        pageTable[i].shared= FALSE;
     }
 
-    // Initialize the sharedPagesCount to zero
+    // Initially the number of valid pages and the number of shared pages is
+    // zero
     countSharedPages = 0;
+    validPages = 0;
 }
 
 //----------------------------------------------------------------------
@@ -139,29 +103,52 @@ AddrSpace::AddrSpace(AddrSpace *parentSpace)
 {
     numPages = parentSpace->GetNumPages();
     countSharedPages = parentSpace->countSharedPages;
-    unsigned i,j, k;
+    validPages = parentSpace->validPages;
+    noffH = parentSpace->noffH;
+    
+    // Now we copy the executable name of the parentSpace to the childSpace
+    strcpy(filename, parentSpace->filename);
+    unsigned i,j;
 
-    ASSERT(numPages-countSharedPages+numPagesAllocated <= NumPhysPages);        // check we're not trying
+    numPagesAllocated += validPages-countSharedPages;
+    ASSERT(numPagesAllocated <= NumPhysPages);        // check we're not trying
                                                                                 // to run anything too big --
                                                                                 // at least until we have
                                                                                 // virtual memory
 
-    DEBUG('a', "Initializing address space, num pages %d, shared %d\n",
-                                        numPages-countSharedPages, countSharedPages);
+    DEBUG('a', "Initializing address space, num pages %d, shared %d, valid %d\n",
+                                        numPages, countSharedPages, validPages);
+
     // first, set up the translation
     TranslationEntry* parentPageTable = parentSpace->GetPageTable();
     pageTable = new TranslationEntry[numPages];
-    for (i = 0, k = 0; i < numPages; i++) {
-        // Allocate a physical page only if it's not shared
+    for (i = 0; i < numPages; i++) {
+        // Shared pages have to point to the correct location
         if(parentPageTable[i].shared == TRUE){
+            DEBUG('A', "Linking to shared page %d\n", parentPageTable[i].physicalPage);
             pageTable[i].physicalPage = parentPageTable[i].physicalPage;
         } else {
-            pageTable[i].physicalPage = k+numPagesAllocated;
-            ++k;
+            // Only allocate pages to those pages which are valid, the rest need
+            // not be allocated pages
+            if(parentPageTable[i].valid == TRUE) {
+                // If there are pages in the free pool, use them otherwise use the next
+                // unallocated page
+                int *physicalPageNumber = (int *)freedPages->Remove();
+                if(physicalPageNumber == NULL) {
+                    pageTable[i].physicalPage = nextUnallocatedPage;
+                    nextUnallocatedPage++;   // Update the number of pages allocated
+                } else {
+                    pageTable[i].physicalPage = *physicalPageNumber;
+                }
+                DEBUG('A', "Creating a new page %d for %d copying %d\n", pageTable[i].physicalPage, 
+                        currentThread->GetPID(), parentPageTable[i].physicalPage);
+            } else {
+                pageTable[i].physicalPage = -1;
+            }
         }
 
-        pageTable[i].virtualPage = i;
         pageTable[i].valid = parentPageTable[i].valid;
+        pageTable[i].virtualPage = i;
         pageTable[i].use = parentPageTable[i].use;
         pageTable[i].dirty = parentPageTable[i].dirty;
         pageTable[i].readOnly = parentPageTable[i].readOnly;  	// if the code segment was entirely on
@@ -173,8 +160,8 @@ AddrSpace::AddrSpace(AddrSpace *parentSpace)
     // Copy the contents
     unsigned startAddrParent, startAddrChild;
     for (i=0; i<numPages; i++) {
-        // If the current page is not shared then copy
-        if(!pageTable[i].shared){
+        // If the page is not shared and the page is valid then only copy
+        if(!pageTable[i].shared && pageTable[i].valid){
             startAddrParent = parentPageTable[i].physicalPage * PageSize;
             startAddrChild = pageTable[i].physicalPage * PageSize;
             for(j=0; j<PageSize;++j) {
@@ -182,8 +169,6 @@ AddrSpace::AddrSpace(AddrSpace *parentSpace)
             }
         }
     }
-
-    numPagesAllocated += numPages-countSharedPages;
 }
 
 //----------------------------------------------------------------------
@@ -207,14 +192,15 @@ AddrSpace::createSharedPageTable(int sharedSize)
 
     // Update the number of pages of the addresspace
     numPages = originalPages + sharedPages;
-    unsigned i, k;
+    unsigned i;
 
-    ASSERT(sharedPages+numPagesAllocated <= NumPhysPages);                // check we're not trying
+    numPagesAllocated +=sharedPages;
+    ASSERT(numPagesAllocated <= NumPhysPages);                // check we're not trying
                                                                                 // to run anything too big --
                                                                                 // at least until we have
                                                                                 // virtual memory
 
-    DEBUG('a', "Extending address space , shared pages %d\n",
+    DEBUG('A', "Extending address space , shared pages %d\n",
                                         sharedPages);
     // first, set up the translation
     TranslationEntry* originalPageTable = GetPageTable();
@@ -232,9 +218,22 @@ AddrSpace::createSharedPageTable(int sharedSize)
     }
 
     // Now set up the translation entry for the shared memory region
-    for(i=originalPages, k=0; i<numPages; ++i, ++k) {
+    for(i=originalPages; i<numPages; ++i) {
         pageTable[i].virtualPage = i;
-        pageTable[i].physicalPage = k+numPagesAllocated;
+
+        // If there are pages in the free pool, use them otherwise use the next
+        // unallocated page
+        int *physicalPageNumber = (int *)freedPages->Remove();
+        if(physicalPageNumber == NULL) {
+            pageTable[i].physicalPage = nextUnallocatedPage;
+            bzero(&machine->mainMemory[nextUnallocatedPage*PageSize], PageSize);
+            nextUnallocatedPage++;   // Update the number of pages allocated
+        } else {
+            pageTable[i].physicalPage = *physicalPageNumber;
+        }
+        DEBUG('A', "Creating a shared page %d for %d\n", pageTable[i].physicalPage, 
+                currentThread->GetPID());
+
         pageTable[i].valid = TRUE;
         pageTable[i].use = FALSE;
         pageTable[i].dirty = FALSE;
@@ -242,13 +241,9 @@ AddrSpace::createSharedPageTable(int sharedSize)
         pageTable[i].shared = TRUE; // this is a shared region
     }
 
-    // Now we have to initialize the shared memory pages with zero
-    unsigned size = numPages * PageSize;
-    bzero(&machine->mainMemory[numPagesAllocated*PageSize], size);
-
     // Increment the number of pages allocated by the number of shared pages
     // allocated right now
-    numPagesAllocated += sharedPages;
+    validPages += sharedPages;
 
     // Set up the stuff for machine correctly
     machine->pageTable = pageTable;
@@ -338,4 +333,30 @@ TranslationEntry*
 AddrSpace::GetPageTable()
 {
    return pageTable;
+}
+//----------------------------------------------------------------------
+//  AddrSpace::freePages
+//  This frees the pages of the given addressSpace and adds them to the
+//  freedPages list
+//----------------------------------------------------------------------
+
+void AddrSpace::freePages() {
+    // Run through the list of pages of the address space and add all the pages
+    // into the free pages list
+    int i, count;
+    int *temp;
+    for (i = 0, count = 0; i < numPages; i++) {
+        if(pageTable[i].valid && !pageTable[i].shared) {
+            count++;
+            temp = new int(pageTable[i].physicalPage);
+            freedPages->Append((void *)temp);
+            DEBUG('A', "Freeing page %d\n", pageTable[i].physicalPage);
+        }
+    }
+
+    // now delete the pageTable for this addrspace
+    delete pageTable;
+
+    // Reduce numPagesAllocated to match the number of pages
+    numPagesAllocated -= count;
 }

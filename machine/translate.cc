@@ -33,6 +33,7 @@
 #include "machine.h"
 #include "addrspace.h"
 #include "system.h"
+#include "filesys.h"
 
 // Routines for converting Words and Short Words to and from the
 // simulated machine's format of little endian.  These end up
@@ -190,64 +191,124 @@ Machine::Translate(int virtAddr, int* physAddr, int size, bool writing)
     unsigned int vpn, offset;
     TranslationEntry *entry;
     unsigned int pageFrame;
+    int flag = 0;
+    unsigned int numPages = currentThread->space->GetNumPages();
 
-    DEBUG('a', "\tTranslate 0x%x, %s: ", virtAddr, writing ? "write" : "read");
+    DEBUG('a', "\tTranslate 0x%x, %s: \n\t", virtAddr, writing ? "write" : "read");
 
-// check for alignment errors
+    // check for alignment errors
     if (((size == 4) && (virtAddr & 0x3)) || ((size == 2) && (virtAddr & 0x1))){
-	DEBUG('a', "alignment problem at %d, size %d!\n", virtAddr, size);
-	return AddressErrorException;
+        DEBUG('a', "alignment problem at %d, size %d!\n", virtAddr, size);
+        return AddressErrorException;
     }
-    
+
     // we must have either a TLB or a page table, but not both!
     ASSERT(tlb == NULL || pageTable == NULL);	
     ASSERT(tlb != NULL || pageTable != NULL);	
 
-// calculate the virtual page number, and offset within the page,
-// from the virtual address
+    // calculate the virtual page number, and offset within the page,
+    // from the virtual address
     vpn = (unsigned) virtAddr / PageSize;
     offset = (unsigned) virtAddr % PageSize;
-    
+
     if (tlb == NULL) {		// => page table => vpn is index into table
-	if (vpn >= pageTableSize) {
-	    DEBUG('a', "virtual page # %d too large for page table size %d!\n", 
-			virtAddr, pageTableSize);
-	    return AddressErrorException;
-	} else if (!pageTable[vpn].valid) {
-	    DEBUG('a', "virtual page # %d too large for page table size %d!\n", 
-			virtAddr, pageTableSize);
-	    return PageFaultException;
-	}
-	entry = &pageTable[vpn];
+        if (vpn >= pageTableSize) {
+            DEBUG('a', "virtual page # %d too large for page table size %d!\n", 
+                    virtAddr, pageTableSize);
+            return AddressErrorException;
+        } else if (!pageTable[vpn].valid) {
+            if(currentThread->space->validPages < numPages) {
+                // In this case we have to perform demand paging whose code is
+                // given below
+                flag = 1;
+            } else {
+                DEBUG('a', "virtual page # %d too large for page table size %d!\n", 
+                        virtAddr, pageTableSize);
+                return PageFaultException;
+            }
+        }
+        entry = &pageTable[vpn];
+
+        // Demand Paging
+        if(flag) {
+            // Open the file while is to be loaded into memory
+            OpenFile *executable = fileSystem->Open(currentThread->space->filename);
+            NoffHeader noffH = currentThread->space->noffH;
+            unsigned int size = numPages * PageSize;
+            unsigned int readSize = PageSize;
+
+            // Increment the numPagesAllocated
+            numPagesAllocated++;
+
+            ASSERT(numPagesAllocated <= NumPhysPages);		// check we're not trying
+                                                                    // to run anything too big --
+                                                                    // at least until we have
+                                                                    // virtual memory
+
+
+            // We either take the page from the pool of freed pages of we take a
+            // page from the pool of unallocated pages
+            int *physicalPageNumber = (int *)freedPages->Remove();
+            if(physicalPageNumber == NULL) {
+                entry->physicalPage = nextUnallocatedPage;
+                nextUnallocatedPage++;   // Update the number of pages allocated
+            } else {
+                entry->physicalPage = *physicalPageNumber;
+            }
+            pageFrame = entry->physicalPage;
+
+            DEBUG('A', "Allocating physical page %d VPN %d virtualaddress %d\n", pageFrame, vpn, virtAddr);
+
+            // zero out this particular page
+            bzero(&machine->mainMemory[pageFrame*PageSize], PageSize);
+
+            // Now copy the corresponding area from memory
+            if( vpn == (numPages - 1) ) {
+                readSize = size - vpn * PageSize;
+            }
+
+            executable->ReadAt(&(machine->mainMemory[pageFrame * PageSize]),
+                    readSize, noffH.code.inFileAddr + vpn*PageSize);
+
+
+            // The number of valid pages of this thread has increased
+            currentThread->space->validPages++;
+
+            // Mark this pagetable entry as valid
+            entry->valid = TRUE;
+
+            // delete the opened executable
+            delete executable;
+        }
     } else {
         for (entry = NULL, i = 0; i < TLBSize; i++)
-    	    if (tlb[i].valid && (tlb[i].virtualPage == vpn)) {
-		entry = &tlb[i];			// FOUND!
-		break;
-	    }
-	if (entry == NULL) {				// not found
-    	    DEBUG('a', "*** no valid TLB entry found for this virtual page!\n");
-    	    return PageFaultException;		// really, this is a TLB fault,
-						// the page may be in memory,
-						// but not in the TLB
-	}
+            if (tlb[i].valid && (tlb[i].virtualPage == vpn)) {
+                entry = &tlb[i];			// FOUND!
+                break;
+            }
+        if (entry == NULL) {				// not found
+            DEBUG('a', "*** no valid TLB entry found for this virtual page!\n");
+            return PageFaultException;		// really, this is a TLB fault,
+            // the page may be in memory,
+            // but not in the TLB
+        }
     }
 
     if (entry->readOnly && writing) {	// trying to write to a read-only page
-	DEBUG('a', "%d mapped read-only at %d in TLB!\n", virtAddr, i);
-	return ReadOnlyException;
+        DEBUG('a', "%d mapped read-only at %d in TLB!\n", virtAddr, i);
+        return ReadOnlyException;
     }
     pageFrame = entry->physicalPage;
 
     // if the pageFrame is too big, there is something really wrong! 
     // An invalid translation was loaded into the page table or TLB. 
     if (pageFrame >= NumPhysPages) { 
-	DEBUG('a', "*** frame %d > %d!\n", pageFrame, NumPhysPages);
-	return BusErrorException;
+        DEBUG('a', "*** frame %d > %d!\n", pageFrame, NumPhysPages);
+        return BusErrorException;
     }
     entry->use = TRUE;		// set the use, dirty bits
     if (writing)
-	entry->dirty = TRUE;
+        entry->dirty = TRUE;
     *physAddr = pageFrame * PageSize + offset;
     ASSERT((*physAddr >= 0) && ((*physAddr + size) <= MemorySize));
     DEBUG('a', "phys addr = 0x%x\n", *physAddr);
@@ -270,6 +331,7 @@ Machine::GetPA (unsigned vaddr)
    TranslationEntry *entry;
    unsigned int pageFrame;
 
+   DEBUG('A', "OOPS");
    if ((vpn < pageTableSize) && pageTable[vpn].valid) {
       entry = &pageTable[vpn];
       pageFrame = entry->physicalPage;

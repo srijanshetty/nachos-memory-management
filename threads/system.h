@@ -48,6 +48,7 @@ extern Interrupt *interrupt;			// interrupt status
 extern Statistics *stats;			// performance metrics
 extern Timer *timer;				// the hardware alarm clock
 extern unsigned numPagesAllocated;		// number of physical frames allocated
+extern unsigned nextUnallocatedPage; // This stores the next unallocated Page
 
 extern Thread *threadArray[];  // Array of thread pointers
 extern unsigned thread_index;                  // Index into this array (also used to assign unique pid)
@@ -61,6 +62,7 @@ extern int *priority;			// Process priority
 extern int cpu_burst_start_time;	// Records the start of current CPU burst
 extern int completionTimeArray[];	// Records the completion time of all simulated threads
 extern bool excludeMainThread;		// Used by completion time statistics calculation
+extern List *freedPages;            // A list of pages freed by SC_Exec
 
 class TimeSortedWaitQueue {		// Needed to implement SC_Sleep
 private:
