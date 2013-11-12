@@ -118,6 +118,7 @@ ExceptionHandler(ExceptionType which)
     int returnValue; // used by SC_SemOp
     int adj; //used by SC_SemOp
     int op; // use by SC_SemCtl
+    int sem; // used by SC_CondOp
 
     if ((which == SyscallException) && (type == SC_Halt)) {
 	DEBUG('a', "Shutdown, initiated by user program.\n");
@@ -359,7 +360,7 @@ ExceptionHandler(ExceptionType which)
         machine->WriteRegister(PCReg, machine->ReadRegister(NextPCReg));
         machine->WriteRegister(NextPCReg, machine->ReadRegister(NextPCReg)+4);
 
-        // Return the starting address of the shared memory region
+        // Return the id of the created Semaphore
         machine->WriteRegister(2, id);
     } else if ((which == SyscallException) && (type == SC_SemOp)) {
         id = machine->ReadRegister(4);
@@ -454,8 +455,48 @@ ExceptionHandler(ExceptionType which)
         machine->WriteRegister(PCReg, machine->ReadRegister(NextPCReg));
         machine->WriteRegister(NextPCReg, machine->ReadRegister(NextPCReg)+4);
 
-        // Return the starting address of the shared memory region
+        // Return the id of the created CV 
         machine->WriteRegister(2, id);
+    } else if ((which == SyscallException) && (type == SC_CondOp)) {
+        id = machine->ReadRegister(4);
+        op = machine->ReadRegister(5);
+        sem = machine->ReadRegister(6);
+
+        // Interrupts needn't be disabled because this code is guranteed to be
+        // atomic by the mutex protecting the CV
+        if(cv_list[id] != -1 && semaphore_list[sem] !=-1 && sem < semaphore_count && id < cv_count) {
+            if(op == COND_OP_WAIT) {
+                cvs[id]->Wait(semaphores[sem]);
+            } else if (op == COND_OP_SIGNAL) {
+                cvs[id]->Signal();
+            } else if (op == COND_OP_BROADCAST) {
+                cvs[id]->Broadcast();
+            }
+        }
+
+        // Advance program counters.
+        machine->WriteRegister(PrevPCReg, machine->ReadRegister(PCReg));
+        machine->WriteRegister(PCReg, machine->ReadRegister(NextPCReg));
+        machine->WriteRegister(NextPCReg, machine->ReadRegister(NextPCReg)+4);
+    } else if ((which == SyscallException) && (type == SC_CondRemove)) {
+        id = machine->ReadRegister(4);
+        returnValue = -1;
+
+        // Interrupts needn't be disabled because this code is guranteed to be
+        // atomic by the mutex protecting the CV
+        if(cv_list[id] != -1 && id < cv_count) {
+            cv_list[id] = -1;
+            delete cvs[id];
+            returnValue = 0;
+        }
+
+        // Advance program counters.
+        machine->WriteRegister(PrevPCReg, machine->ReadRegister(PCReg));
+        machine->WriteRegister(PCReg, machine->ReadRegister(NextPCReg));
+        machine->WriteRegister(NextPCReg, machine->ReadRegister(NextPCReg)+4);
+
+        // Return the starting address of the shared memory region
+        machine->WriteRegister(2, returnValue);
     } else {
         printf("Unexpected user mode exception %d %d\n", which, type);
         ASSERT(FALSE);
