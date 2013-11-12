@@ -124,8 +124,6 @@ void Lock::Acquire() {}
 void Lock::Release() {}
 
 Condition::Condition(char* debugName) {
-    condition = new Semaphore("cond", 0);
-    count = 0;
 }
 
 Condition::~Condition() { }
@@ -154,7 +152,7 @@ Condition::Wait(Semaphore *mutex) {
 void 
 Condition::Signal() {
     // Remove a thread and make it readyToRun
-    thread = (Thread *)queue->Remove();
+    Thread *thread = (Thread *)queue->Remove();
     if (thread != NULL)	
         scheduler->ReadyToRun(thread);
 }
