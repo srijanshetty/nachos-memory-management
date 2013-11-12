@@ -96,6 +96,7 @@ AddrSpace::AddrSpace(OpenFile *executable)
     validPages = 0;
 
     /*
+
     unsigned vpn, offset;
     TranslationEntry *entry;
     unsigned int pageFrame;
