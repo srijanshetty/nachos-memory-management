@@ -331,6 +331,7 @@ Machine::GetPA (unsigned vaddr)
    TranslationEntry *entry;
    unsigned int pageFrame;
 
+   DEBUG('A', "OOPS");
    if ((vpn < pageTableSize) && pageTable[vpn].valid) {
       entry = &pageTable[vpn];
       pageFrame = entry->physicalPage;

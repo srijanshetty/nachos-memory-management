@@ -104,6 +104,7 @@ AddrSpace::AddrSpace(AddrSpace *parentSpace)
     numPages = parentSpace->GetNumPages();
     countSharedPages = parentSpace->countSharedPages;
     validPages = parentSpace->validPages;
+    noffH = parentSpace->noffH;
     
     // Now we copy the executable name of the parentSpace to the childSpace
     strcpy(filename, parentSpace->filename);
@@ -124,6 +125,7 @@ AddrSpace::AddrSpace(AddrSpace *parentSpace)
     for (i = 0; i < numPages; i++) {
         // Shared pages have to point to the correct location
         if(parentPageTable[i].shared == TRUE){
+            DEBUG('A', "Linking to shared page %d\n", parentPageTable[i].physicalPage);
             pageTable[i].physicalPage = parentPageTable[i].physicalPage;
         } else {
             // Only allocate pages to those pages which are valid, the rest need
@@ -138,13 +140,15 @@ AddrSpace::AddrSpace(AddrSpace *parentSpace)
                 } else {
                     pageTable[i].physicalPage = *physicalPageNumber;
                 }
+                DEBUG('A', "Creating a new page %d for %d copying %d\n", pageTable[i].physicalPage, 
+                        currentThread->GetPID(), parentPageTable[i].physicalPage);
             } else {
                 pageTable[i].physicalPage = -1;
             }
         }
 
-        pageTable[i].virtualPage = i;
         pageTable[i].valid = parentPageTable[i].valid;
+        pageTable[i].virtualPage = i;
         pageTable[i].use = parentPageTable[i].use;
         pageTable[i].dirty = parentPageTable[i].dirty;
         pageTable[i].readOnly = parentPageTable[i].readOnly;  	// if the code segment was entirely on
@@ -196,7 +200,7 @@ AddrSpace::createSharedPageTable(int sharedSize)
                                                                                 // at least until we have
                                                                                 // virtual memory
 
-    DEBUG('a', "Extending address space , shared pages %d\n",
+    DEBUG('A', "Extending address space , shared pages %d\n",
                                         sharedPages);
     // first, set up the translation
     TranslationEntry* originalPageTable = GetPageTable();
@@ -227,6 +231,8 @@ AddrSpace::createSharedPageTable(int sharedSize)
         } else {
             pageTable[i].physicalPage = *physicalPageNumber;
         }
+        DEBUG('A', "Creating a shared page %d for %d\n", pageTable[i].physicalPage, 
+                currentThread->GetPID());
 
         pageTable[i].valid = TRUE;
         pageTable[i].use = FALSE;
