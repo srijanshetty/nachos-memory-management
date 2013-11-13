@@ -71,6 +71,9 @@ StartExec(char *filename)
         return;
     }
 
+    // delete the old backupMemory
+    delete currentThread->backupMemory;
+
     // Create a new address space and pass it the name of the executable
     currentThread->space->freePages(TRUE);
     space = new AddrSpace(executable);    

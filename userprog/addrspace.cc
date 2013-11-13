@@ -95,6 +95,9 @@ AddrSpace::AddrSpace(OpenFile *executable)
     // zero
     countSharedPages = 0;
     validPages = 0;
+
+    // Now we have to initialize the backupMemory 
+    currentThread->initBackupMemory(numPages*PageSize);
 }
 
 //----------------------------------------------------------------------
@@ -179,6 +182,9 @@ AddrSpace::AddrSpace(AddrSpace *parentSpace, int threadPid)
             }
         }
     }
+
+    // Initialize the backupMemory for the child
+    threadArray[threadPid]->initBackupMemory(numPages*PageSize);
 }
 
 //----------------------------------------------------------------------

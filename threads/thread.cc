@@ -685,4 +685,9 @@ Thread::GetUsage (void)
 {
    return usage;
 }
+
+void 
+Thread::initBackupMemory(int size) {
+    backupMemory = new char[size];
+}
 #endif

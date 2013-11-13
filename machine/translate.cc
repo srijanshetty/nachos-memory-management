@@ -187,12 +187,13 @@ Machine::WriteMem(int addr, int size, int value)
 ExceptionType
 Machine::Translate(int virtAddr, int* physAddr, int size, bool writing)
 {
-    int i;
+    int i, j;
     unsigned int vpn, offset;
     TranslationEntry *entry;
     unsigned int pageFrame;
     int flag = 0;
     unsigned int numPages = currentThread->space->GetNumPages();
+    unsigned int StartMachine, StartBackup;
 
     DEBUG('a', "\tTranslate 0x%x, %s: \n\t", virtAddr, writing ? "write" : "read");
 
@@ -262,10 +263,28 @@ Machine::Translate(int virtAddr, int* physAddr, int size, bool writing)
 
                 // Now this page should no longer be valid
                 frameEntry->valid = FALSE;
-                frameEntry->cached = TRUE;
+                thread->space->validPages--;
 
-                // We have to obtain a candidate for replacing
-                interrupt->Halt();
+                // Now we have to copy the values between the backupMemory and
+                // machineMemory in case the page is dirty
+                if(frameEntry->dirty) {
+                    DEBUG('R', "The page is dirty\n");
+
+                    // Now this frameEntry is cached
+                    frameEntry->cached = TRUE;
+
+                    // Now we have to copy the mainMemory to backupMemory
+                    StartMachine = frameEntry->physicalPage * PageSize;
+                    StartBackup = frameEntry->virtualPage * PageSize;
+                    for(j=0; j<PageSize; j++) {
+                        thread->backupMemory[StartBackup+j] = machine->mainMemory[StartMachine+j];
+                        DEBUG('r', "B: %d\n", thread->backupMemory[StartBackup+j]);
+                        DEBUG('r', "M: %d\n", machine->mainMemory[StartMachine+j]);
+                    }
+                }
+
+                // Now we have to change the pageframe of entry
+                entry->physicalPage = frameEntry->physicalPage;
             } else {
                 // Increment the numPagesAllocated
                 numPagesAllocated++;
