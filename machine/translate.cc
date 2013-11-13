@@ -241,22 +241,45 @@ Machine::Translate(int virtAddr, int* physAddr, int size, bool writing)
                 // here we have to handle page replacement
                 DEBUG('R', "Invoking page replacement algorithm\n");
 
+                // The frame which will be replace
+                int *frameToReplace;
+                TranslationEntry *frameEntry;
+
+                // Select the frame according to the algorithm
+                if(pageAlgo == FIFO) {
+                    frameToReplace = (int *)fifoQueue->Remove();
+                    DEBUG('R', "FIFO selects %d\n", *frameToReplace);
+                }
+
+                // Get the PTE of this frame
+                frameEntry = pageEntries[*frameToReplace];
+                Thread *thread = threadArray[frameEntry->threadPid];
+
+                DEBUG('R', "virtual %d physical %d thread %d shared %d valid %d\n", 
+                        frameEntry->virtualPage, frameEntry->physicalPage, 
+                        frameEntry->threadPid, frameEntry->shared,
+                        frameEntry->valid);
+
+                // Now this page should no longer be valid
+                frameEntry->valid = FALSE;
+                frameEntry->cached = TRUE;
+
                 // We have to obtain a candidate for replacing
                 interrupt->Halt();
-            }
-
-            // Increment the numPagesAllocated
-            numPagesAllocated++;
-
-            // We either take the page from the pool of freed pages of we take a
-            // page from the pool of unallocated pages
-            int *physicalPageNumber = (int *)freedPages->Remove();
-            if(physicalPageNumber == NULL) {
-                entry->physicalPage = nextUnallocatedPage;
-                nextUnallocatedPage++;   // Update the number of pages allocated
             } else {
-                entry->physicalPage = *physicalPageNumber;
-                delete physicalPageNumber;
+                // Increment the numPagesAllocated
+                numPagesAllocated++;
+
+                // We either take the page from the pool of freed pages of we take a
+                // page from the pool of unallocated pages
+                int *physicalPageNumber = (int *)freedPages->Remove();
+                if(physicalPageNumber == NULL) {
+                    entry->physicalPage = nextUnallocatedPage;
+                    nextUnallocatedPage++;   // Update the number of pages allocated
+                } else {
+                    entry->physicalPage = *physicalPageNumber;
+                    delete physicalPageNumber;
+                }
             }
 
             // This stores a refernce to the pageTable entry

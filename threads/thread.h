@@ -186,6 +186,9 @@ class Thread {
     void RestoreUserState();		// restore user-level register state
 
     AddrSpace *space;			// User code this thread is running.
+
+    char *backupMemory; // the backup of pages
+    void initBackupMemory(int size);
 #endif
 };
 
