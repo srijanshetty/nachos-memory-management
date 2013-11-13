@@ -195,6 +195,7 @@ ExceptionHandler(ExceptionType which)
        
        child = new Thread("Forked thread", GET_NICE_FROM_PARENT);
        child->space = new AddrSpace (currentThread->space);  // Duplicates the address space
+       child->initPageCache(child->space->GetNumPages()*PageSize); // Set up the page cache of the child
        child->SaveUserState ();		     		      // Duplicate the register set
        child->ResetReturnValue ();			     // Sets the return register to zero
        child->StackAllocate (ForkStartFunction, 0);	// Make it ready for a later context switch

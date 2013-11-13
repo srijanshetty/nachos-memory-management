@@ -240,11 +240,12 @@ Machine::Translate(int virtAddr, int* physAddr, int size, bool writing)
             // Increment the numPagesAllocated
             numPagesAllocated++;
 
-            ASSERT(numPagesAllocated <= NumPhysPages);		// check we're not trying
-                                                                    // to run anything too big --
-                                                                    // at least until we have
-                                                                    // virtual memory
-
+            // We have to check whether we have exhausted the set of free pages,
+            // then we have to use the page replace algorithm
+            if ( numPagesAllocated == NumPhysPages ) {
+                numPagesAllocated--;
+                // Now run the page replacement algorithm
+            }
 
             // We either take the page from the pool of freed pages of we take a
             // page from the pool of unallocated pages

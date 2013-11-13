@@ -71,6 +71,10 @@ StartExec(char *filename)
         return;
     }
 
+    // we have to delete the pageCache of the thread before allocating a new
+    // address space
+    delete currentThread->pageCache;
+
     // Create a new address space and pass it the name of the executable
     currentThread->space->freePages();
     space = new AddrSpace(executable);    

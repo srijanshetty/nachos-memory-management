@@ -86,12 +86,16 @@ AddrSpace::AddrSpace(OpenFile *executable)
                                         // a separate page, we could set its 
                                         // pages to be read-only
         pageTable[i].shared= FALSE;
+        pageTable[i].cached = FALSE;
     }
 
     // Initially the number of valid pages and the number of shared pages is
     // zero
     countSharedPages = 0;
     validPages = 0;
+
+    // Initialize the pageCache of the thread
+    currentThread->initPageCache(numPages*PageSize); // Set up the page cache of the child
 }
 
 //----------------------------------------------------------------------
@@ -155,6 +159,7 @@ AddrSpace::AddrSpace(AddrSpace *parentSpace)
                                         			// a separate page, we could set its
                                         			// pages to be read-only
         pageTable[i].shared= parentPageTable[i].shared;
+        pageTable[i].cached = FALSE; // The thread has just been created so it has no cached pages
     }
 
     // Copy the contents
@@ -197,6 +202,7 @@ AddrSpace::createSharedPageTable(int sharedSize, int *pagesCreated)
     numPages = originalPages + sharedPages;
     unsigned i;
 
+    // This is for NEPALI - DAKSH!!!!!!
     numPagesAllocated +=sharedPages;
     ASSERT(numPagesAllocated <= NumPhysPages);                // check we're not trying
                                                                                 // to run anything too big --
@@ -218,6 +224,7 @@ AddrSpace::createSharedPageTable(int sharedSize, int *pagesCreated)
                                         			// a separate page, we could set its
                                         			// pages to be read-only
         pageTable[i].shared = originalPageTable[i].shared;
+        pageTable[i].cached = originalPageTable[i].cached; 
     }
 
     // Now set up the translation entry for the shared memory region
@@ -242,6 +249,7 @@ AddrSpace::createSharedPageTable(int sharedSize, int *pagesCreated)
         pageTable[i].dirty = FALSE;
         pageTable[i].readOnly = FALSE;  // if the code segment was entirely on 
         pageTable[i].shared = TRUE; // this is a shared region
+        pageTable[i].cached = FALSE; // doesn't matter for shared pages
     }
 
     // Increment the number of pages allocated by the number of shared pages

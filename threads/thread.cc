@@ -96,6 +96,8 @@ Thread::~Thread()
     ASSERT(this != currentThread);
     if (stack != NULL)
 	DeallocBoundedArray((char *) stack, StackSize * sizeof(int));
+
+    delete pageCache;
 }
 
 //----------------------------------------------------------------------
@@ -681,5 +683,11 @@ int
 Thread::GetUsage (void)
 {
    return usage;
+}
+
+// used to setup the page cache of the thread
+void
+Thread::initPageCache(int cacheSize) {
+    pageCache = new char[cacheSize];
 }
 #endif

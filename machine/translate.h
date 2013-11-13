@@ -41,6 +41,8 @@ class TranslationEntry {
     bool dirty;         // This bit is set by the hardware every time the
 			// page is modified.
     bool shared; // To indicate whether a particular page is shared or not
+
+    bool cached; // this indicates whether to use the cache value or the executable value
 };
 
 #endif
