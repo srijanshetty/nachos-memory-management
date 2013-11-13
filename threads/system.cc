@@ -36,6 +36,7 @@ char **batchProcesses;			// Names of batch processes
 int *priority;				// Process priority
 
 TranslationEntry *pageEntries[NumPhysPages]; // A list of pageEntries
+List *fifoQueue; 
 
 int cpu_burst_start_time;        // Records the start of current CPU burst
 int completionTimeArray[MAX_THREAD_COUNT];        // Records the completion time of all simulated threads
@@ -101,6 +102,25 @@ TimerInterruptHandler(int dummy)
     }
 }
 
+
+// This method is used to delete an element from the FIFO Queue
+void deleteFromFifoQueue(int value) {
+    List *tempList = new List();
+    int *temp;
+
+    temp = (int *)fifoQueue->Remove();
+    while( temp != NULL ) {
+        if(*temp == value) {
+            DEBUG('R', "deleting the value %d from FIFO queue\n", *temp);
+            delete temp;
+        } else {
+            tempList->Append((void *)temp);
+        }
+        temp = (int *)fifoQueue->Remove();
+    }
+    fifoQueue = tempList;
+}
+
 //----------------------------------------------------------------------
 // Initialize
 // 	Initialize Nachos global data structures.  Interpret command
@@ -127,6 +147,7 @@ Initialize(int argc, char **argv)
 
     schedulingAlgo = NON_PREEMPTIVE_BASE;	// Default
     pageAlgo = NORMAL;
+    fifoQueue = new List();
 
     for(i=0; i<NumPhysPages; ++i) {
         pageEntries[i] = NULL;

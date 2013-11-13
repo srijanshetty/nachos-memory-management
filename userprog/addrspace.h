@@ -19,6 +19,8 @@
 
 #define UserStackSize		1024 	// increase this as necessary!
 
+extern void deleteFromFifoQueue(int value);
+
 class AddrSpace {
   public:
     AddrSpace(OpenFile *executable);	// Create an address space,

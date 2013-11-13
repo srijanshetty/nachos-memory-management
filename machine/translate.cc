@@ -237,14 +237,16 @@ Machine::Translate(int virtAddr, int* physAddr, int size, bool writing)
             unsigned int size = numPages * PageSize;
             unsigned int readSize = PageSize;
 
+            if(numPagesAllocated == (NumPhysPages-1)) {
+                // here we have to handle page replacement
+                DEBUG('R', "Invoking page replacement algorithm\n");
+
+                // We have to obtain a candidate for replacing
+                interrupt->Halt();
+            }
+
             // Increment the numPagesAllocated
             numPagesAllocated++;
-
-            ASSERT(numPagesAllocated <= NumPhysPages);		// check we're not trying
-                                                                    // to run anything too big --
-                                                                    // at least until we have
-                                                                    // virtual memory
-
 
             // We either take the page from the pool of freed pages of we take a
             // page from the pool of unallocated pages
@@ -263,6 +265,13 @@ Machine::Translate(int virtAddr, int* physAddr, int size, bool writing)
             pageFrame = entry->physicalPage;
 
             DEBUG('A', "Allocating physical page %d VPN %d virtualaddress %d\n", pageFrame, vpn, virtAddr);
+
+            // Add the newly allocated page to the fifoQueue
+            if(pageAlgo == FIFO) {
+                int *temp = new int(pageFrame);
+                fifoQueue->Append((void *)temp);
+                DEBUG('R', "Adding %d to FIFO Queue\n");
+            }
 
             // zero out this particular page
             bzero(&machine->mainMemory[pageFrame*PageSize], PageSize);

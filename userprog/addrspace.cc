@@ -358,6 +358,7 @@ AddrSpace::GetPageTable()
 {
    return pageTable;
 }
+
 //----------------------------------------------------------------------
 //  AddrSpace::freePages
 //  This frees the pages of the given addressSpace and adds them to the
@@ -369,6 +370,7 @@ void AddrSpace::freePages(bool deletePT) {
     // into the free pages list
     int i, count;
     int *temp;
+
     for (i = 0, count = 0; i < numPages; i++) {
         if(pageTable[i].valid && !pageTable[i].shared) {
             count++;
@@ -378,6 +380,8 @@ void AddrSpace::freePages(bool deletePT) {
 
             // Remove the entry from the hashmap
             pageEntries[pageTable[i].physicalPage] = NULL;
+
+            deleteFromFifoQueue(pageTable[i].physicalPage);
         }
     }
 

@@ -67,6 +67,7 @@ extern int pageAlgo;
 extern char **batchProcesses;		// Names of batch executables
 extern int *priority;			// Process priority
 extern TranslationEntry *pageEntries[NumPhysPages]; // A list of pageEntries
+extern List* fifoQueue; // This is a list of pages in fifo
 
 extern int cpu_burst_start_time;	// Records the start of current CPU burst
 extern int completionTimeArray[];	// Records the completion time of all simulated threads
