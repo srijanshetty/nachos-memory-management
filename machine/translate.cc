@@ -240,7 +240,7 @@ Machine::Translate(int virtAddr, int* physAddr, int size, bool writing)
 
             if(numPagesAllocated == (NumPhysPages-1)) {
                 // here we have to handle page replacement
-                DEBUG('R', "Invoking page replacement algorithm\n");
+                DEBUG('R', "\nInvoking page replacement algorithm: ");
 
                 // The frame which will be replace
                 int *frameToReplace;
@@ -249,14 +249,14 @@ Machine::Translate(int virtAddr, int* physAddr, int size, bool writing)
                 // Select the frame according to the algorithm
                 if(pageAlgo == FIFO) {
                     frameToReplace = (int *)fifoQueue->Remove();
-                    DEBUG('R', "FIFO selects %d\n", *frameToReplace);
+                    DEBUG('R', "\n\tFIFO selects frame %d", *frameToReplace);
                 }
 
                 // Get the PTE of this frame
                 frameEntry = pageEntries[*frameToReplace];
                 Thread *thread = threadArray[frameEntry->threadPid];
 
-                DEBUG('R', "virtual %d physical %d thread %d shared %d valid %d\n", 
+                DEBUG('R', "\n\tvirtual %d physical %d thread %d shared %d valid %d", 
                         frameEntry->virtualPage, frameEntry->physicalPage, 
                         frameEntry->threadPid, frameEntry->shared,
                         frameEntry->valid);
@@ -268,7 +268,8 @@ Machine::Translate(int virtAddr, int* physAddr, int size, bool writing)
                 // Now we have to copy the values between the backupMemory and
                 // machineMemory in case the page is dirty
                 if(frameEntry->dirty) {
-                    DEBUG('R', "The page is dirty\n");
+                    DEBUG('R', "\n\tpage %d of thread %d is dirty"
+                            , frameEntry->virtualPage, frameEntry->threadPid);
 
                     // Now this frameEntry is cached
                     frameEntry->cached = TRUE;
@@ -285,6 +286,7 @@ Machine::Translate(int virtAddr, int* physAddr, int size, bool writing)
 
                 // Now we have to change the pageframe of entry
                 entry->physicalPage = frameEntry->physicalPage;
+                DEBUG('R', "\n\n");
             } else {
                 // Increment the numPagesAllocated
                 numPagesAllocated++;
@@ -312,19 +314,32 @@ Machine::Translate(int virtAddr, int* physAddr, int size, bool writing)
             if(pageAlgo == FIFO) {
                 int *temp = new int(pageFrame);
                 fifoQueue->Append((void *)temp);
-                DEBUG('R', "Adding %d to FIFO Queue\n");
+                DEBUG('R', "Adding frame %d to FIFO Queue\n");
             }
 
             // zero out this particular page
             bzero(&machine->mainMemory[pageFrame*PageSize], PageSize);
 
-            // Now copy the corresponding area from memory
-            if( vpn == (numPages - 1) ) {
-                readSize = size - vpn * PageSize;
-            }
+            // Now here are two cases, we may either have to use the
+            // backupMemory of the thread or the mainMemory
+            if(entry->cached) {
+                DEBUG('R', "page %d of %d has been modified\n", 
+                        entry->virtualPage, entry->threadPid);
 
-            executable->ReadAt(&(machine->mainMemory[pageFrame * PageSize]),
-                    readSize, noffH.code.inFileAddr + vpn*PageSize);
+                StartMachine = pageFrame * PageSize;
+                StartBackup = entry->virtualPage * PageSize;
+                for(j=0; j<PageSize; ++j) {
+                    machine->mainMemory[StartMachine+j] = currentThread->backupMemory[StartBackup+j];
+                }
+            } else {
+                // Now copy the corresponding area from memory
+                if( vpn == (numPages - 1) ) {
+                    readSize = size - vpn * PageSize;
+                }
+
+                executable->ReadAt(&(machine->mainMemory[pageFrame * PageSize]),
+                        readSize, noffH.code.inFileAddr + vpn*PageSize);
+            }
 
 
             // The number of valid pages of this thread has increased
