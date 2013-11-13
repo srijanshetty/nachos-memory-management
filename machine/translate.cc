@@ -231,9 +231,6 @@ Machine::Translate(int virtAddr, int* physAddr, int size, bool writing)
 
         // Demand Paging
         if(flag) {
-            // Open the file while is to be loaded into memory
-            OpenFile *executable = fileSystem->Open(currentThread->space->filename);
-            NoffHeader noffH = currentThread->space->noffH;
             unsigned int size = numPages * PageSize;
             unsigned int readSize = PageSize;
 
@@ -263,14 +260,35 @@ Machine::Translate(int virtAddr, int* physAddr, int size, bool writing)
             // zero out this particular page
             bzero(&machine->mainMemory[pageFrame*PageSize], PageSize);
 
-            // Now copy the corresponding area from memory
-            if( vpn == (numPages - 1) ) {
-                readSize = size - vpn * PageSize;
+            if(entry->cached) {
+                // In this cache, we have a cached copy of the page and so we
+                // use this copy instead of reading from the machine, this is
+                // done by reading from the pageCache of the currentThread
+                DEBUG('A', "Copying from machine\n");
+                unsigned startCache, startMachine;
+                startMachine = entry->physicalPage * PageSize;
+                startCache = vpn * PageSize;
+                unsigned int j;
+                for(j=0; j<PageSize;++j) {
+                    currentThread->pageCache[startCache+j] = machine->mainMemory[startMachine+j];
+                }
+            } else {
+                DEBUG('A', "Copying from executable\n");
+                // Open the file while is to be loaded into memory
+                OpenFile *executable = fileSystem->Open(currentThread->space->filename);
+                NoffHeader noffH = currentThread->space->noffH;
+
+                // Now copy the corresponding area from memory
+                if( vpn == (numPages - 1) ) {
+                    readSize = size - vpn * PageSize;
+                }
+
+                executable->ReadAt(&(machine->mainMemory[pageFrame * PageSize]),
+                        readSize, noffH.code.inFileAddr + vpn*PageSize);
+
+                // delete the opened executable
+                delete executable;
             }
-
-            executable->ReadAt(&(machine->mainMemory[pageFrame * PageSize]),
-                    readSize, noffH.code.inFileAddr + vpn*PageSize);
-
 
             // The number of valid pages of this thread has increased
             currentThread->space->validPages++;
@@ -278,8 +296,6 @@ Machine::Translate(int virtAddr, int* physAddr, int size, bool writing)
             // Mark this pagetable entry as valid
             entry->valid = TRUE;
 
-            // delete the opened executable
-            delete executable;
             return PageFaultException;
         }
     } else {
