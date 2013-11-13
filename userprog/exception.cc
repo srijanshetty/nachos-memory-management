@@ -317,9 +317,13 @@ ExceptionHandler(ExceptionType which)
        machine->WriteRegister(NextPCReg, machine->ReadRegister(NextPCReg)+4);
     } else if ((which == SyscallException) && (type == SC_ShmAllocate)) {
        sharedSize = machine->ReadRegister(4);
+       int pagesCreated;
 
        // create a new Page table with shared pages
-       sharedMemoryStart= (unsigned)currentThread->space->createSharedPageTable(sharedSize);
+       sharedMemoryStart = (unsigned)currentThread->space->createSharedPageTable(sharedSize, &pagesCreated);
+
+       // Increment the number of page faults
+       stats->numPageFaults += pagesCreated;
 
        // Advance program counters.
        machine->WriteRegister(PrevPCReg, machine->ReadRegister(PCReg));

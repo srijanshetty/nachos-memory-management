@@ -178,7 +178,7 @@ AddrSpace::AddrSpace(AddrSpace *parentSpace)
 //----------------------------------------------------------------------
 
 unsigned 
-AddrSpace::createSharedPageTable(int sharedSize)
+AddrSpace::createSharedPageTable(int sharedSize, int *pagesCreated)
 {
     // Compute the numPages in the originalSpace
     unsigned originalPages = GetNumPages();
@@ -189,6 +189,9 @@ AddrSpace::createSharedPageTable(int sharedSize)
         sharedPages ++;
     }
     countSharedPages += sharedPages;
+
+    // Return the number of pages created
+    *pagesCreated = sharedPages;
 
     // Update the number of pages of the addresspace
     numPages = originalPages + sharedPages;

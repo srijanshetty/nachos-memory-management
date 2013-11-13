@@ -40,7 +40,7 @@ class AddrSpace {
 
     TranslationEntry* GetPageTable();
 
-    unsigned createSharedPageTable(int sharedSize); // creates a page table with shared
+    unsigned createSharedPageTable(int sharedSize, int *pagesCreated); // creates a page table with shared
                                     // pages
 
     int countSharedPages; // Keeps a count of the number of sharedPages
