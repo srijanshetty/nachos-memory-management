@@ -241,7 +241,14 @@ Machine::Translate(int virtAddr, int* physAddr, int size, bool writing)
             // then we have to use the page replace algorithm
             if ( numPagesAllocated == NumPhysPages ) {
                 numPagesAllocated--;
-                // Now run the page replacement algorithm
+                int pageToReplace;
+
+                if(pageReplacementAlgo == FIFO) {
+                } else if (pageReplacementAlgo == LRU) {
+                } else if (pageReplacementAlgo == LRU_CLOCK){
+                } else if (pageReplacementAlgo == RANDOM) {
+                } else {
+                }
             }
 
             // We either take the page from the pool of freed pages of we take a
@@ -295,6 +302,9 @@ Machine::Translate(int virtAddr, int* physAddr, int size, bool writing)
 
             // Mark this pagetable entry as valid
             entry->valid = TRUE;
+
+            // Now store this entry into the hashMap of pageEntries
+            pageEntries[entry->physicalPage] = entry;
 
             return PageFaultException;
         }

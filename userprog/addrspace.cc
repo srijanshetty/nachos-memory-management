@@ -146,6 +146,9 @@ AddrSpace::AddrSpace(AddrSpace *parentSpace)
                 }
                 DEBUG('A', "Creating a new page %d for %d copying %d\n", pageTable[i].physicalPage, 
                         currentThread->GetPID(), parentPageTable[i].physicalPage);
+
+                // Now store this entry into the hashMap of pageEntries
+                pageEntries[pageTable[i].physicalPage] = &pageTable[i];
             } else {
                 pageTable[i].physicalPage = -1;
             }
@@ -243,6 +246,8 @@ AddrSpace::createSharedPageTable(int sharedSize, int *pagesCreated)
         }
         DEBUG('A', "Creating a shared page %d for %d\n", pageTable[i].physicalPage, 
                 currentThread->GetPID());
+        // Now store this entry into the hashMap of pageEntries
+        pageEntries[pageTable[i].physicalPage] = &pageTable[i];
 
         pageTable[i].valid = TRUE;
         pageTable[i].use = FALSE;

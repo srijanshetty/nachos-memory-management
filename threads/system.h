@@ -64,6 +64,7 @@ extern bool exitThreadArray[];		// Marks exited threads
 
 extern int schedulingAlgo;		// Scheduling algorithm to simulate
 extern int pageReplacementAlgo; // The page replacement algorithm to simulate
+
 extern char **batchProcesses;		// Names of batch executables
 extern int *priority;			// Process priority
 
@@ -71,6 +72,9 @@ extern int cpu_burst_start_time;	// Records the start of current CPU burst
 extern int completionTimeArray[];	// Records the completion time of all simulated threads
 extern bool excludeMainThread;		// Used by completion time statistics calculation
 extern List *freedPages;            // A list of pages freed by SC_Exec
+
+// This maintains a hashMap of pageTable entries
+extern TranslationEntry *pageEntries;
 
 class TimeSortedWaitQueue {		// Needed to implement SC_Sleep
 private:
