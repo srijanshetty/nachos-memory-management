@@ -144,6 +144,10 @@ AddrSpace::AddrSpace(AddrSpace *parentSpace, int threadPid)
                     pageTable[i].physicalPage = *physicalPageNumber;
                     delete physicalPageNumber;
                 }
+
+                // This stores a refernce to the pageTable entry
+                pageEntries[pageTable[i].physicalPage] = &pageTable[i];
+
                 DEBUG('A', "Creating a new page %d for %d copying %d\n", pageTable[i].physicalPage, 
                         currentThread->GetPID(), parentPageTable[i].physicalPage);
             } else {
@@ -228,6 +232,9 @@ AddrSpace::createSharedPageTable(int sharedSize, int *pagesCreated)
         pageTable[i].shared = originalPageTable[i].shared;
         pageTable[i].cached = originalPageTable[i].cached;
         pageTable[i].threadPid = originalPageTable[i].threadPid;
+
+        // This stores a refernce to the pageTable entry
+        pageEntries[pageTable[i].physicalPage] = &pageTable[i];
     }
 
     // Now set up the translation entry for the shared memory region
@@ -245,6 +252,7 @@ AddrSpace::createSharedPageTable(int sharedSize, int *pagesCreated)
             pageTable[i].physicalPage = *physicalPageNumber;
             delete physicalPageNumber;
         }
+
         DEBUG('A', "Creating a shared page %d for %d\n", pageTable[i].physicalPage, 
                 currentThread->GetPID());
 
@@ -356,7 +364,7 @@ AddrSpace::GetPageTable()
 //  freedPages list
 //----------------------------------------------------------------------
 
-void AddrSpace::freePages() {
+void AddrSpace::freePages(bool deletePT) {
     // Run through the list of pages of the address space and add all the pages
     // into the free pages list
     int i, count;
@@ -367,11 +375,16 @@ void AddrSpace::freePages() {
             temp = new int(pageTable[i].physicalPage);
             freedPages->Append((void *)temp);
             DEBUG('A', "Freeing page %d\n", pageTable[i].physicalPage);
+
+            // Remove the entry from the hashmap
+            pageEntries[pageTable[i].physicalPage] = NULL;
         }
     }
 
-    // now delete the pageTable for this addrspace
-    delete pageTable;
+    // delete the pageTable if yes
+    if(deletePT) {
+        delete pageTable;
+    }
 
     // Reduce numPagesAllocated to match the number of pages
     numPagesAllocated -= count;

@@ -265,6 +265,9 @@ Thread::Exit (bool terminateSim, int exitcode)
        }
     }
 
+    // Free the pages associated with this thread
+    currentThread->space->freePages(FALSE);
+
     nextThread = scheduler->FindNextToRun();
     if (nextThread == NULL) {
        scheduler->SetEmptyReadyQueueStartTime(stats->totalTicks);

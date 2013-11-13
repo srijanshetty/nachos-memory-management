@@ -256,6 +256,10 @@ Machine::Translate(int virtAddr, int* physAddr, int size, bool writing)
                 entry->physicalPage = *physicalPageNumber;
                 delete physicalPageNumber;
             }
+
+            // This stores a refernce to the pageTable entry
+            pageEntries[entry->physicalPage] = entry;
+
             pageFrame = entry->physicalPage;
 
             DEBUG('A', "Allocating physical page %d VPN %d virtualaddress %d\n", pageFrame, vpn, virtAddr);

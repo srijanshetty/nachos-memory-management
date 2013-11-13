@@ -72,7 +72,7 @@ StartExec(char *filename)
     }
 
     // Create a new address space and pass it the name of the executable
-    currentThread->space->freePages();
+    currentThread->space->freePages(TRUE);
     space = new AddrSpace(executable);    
     currentThread->space = space;
     strcpy(space->filename, filename);
