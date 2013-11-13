@@ -25,7 +25,7 @@ class AddrSpace {
 					// initializing it with the program
 					// stored in the file "executable"
 
-    AddrSpace (AddrSpace *parentSpace);	// Used by fork
+    AddrSpace (AddrSpace *parentSpace, int threadPid);	// Used by fork
 
     ~AddrSpace();			// De-allocate an address space
 

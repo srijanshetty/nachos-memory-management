@@ -59,6 +59,7 @@ SwapHeader (NoffHeader *noffH)
 AddrSpace::AddrSpace(OpenFile *executable)
 {
     unsigned int i, size;
+    int threadPid = currentThread->GetPID();
 
     executable->ReadAt((char *)&noffH, sizeof(noffH), 0);
     if ((noffH.noffMagic != NOFFMAGIC) && 
@@ -87,6 +88,7 @@ AddrSpace::AddrSpace(OpenFile *executable)
                                         // pages to be read-only
         pageTable[i].shared= FALSE;
         pageTable[i].cached = FALSE;
+        pageTable[i].threadPid = threadPid;
     }
 
     // Initially the number of valid pages and the number of shared pages is
@@ -100,7 +102,7 @@ AddrSpace::AddrSpace(OpenFile *executable)
 //      We need to duplicate the address space of the parent.
 //----------------------------------------------------------------------
 
-AddrSpace::AddrSpace(AddrSpace *parentSpace)
+AddrSpace::AddrSpace(AddrSpace *parentSpace, int threadPid)
 {
     numPages = parentSpace->GetNumPages();
     countSharedPages = parentSpace->countSharedPages;
@@ -158,6 +160,7 @@ AddrSpace::AddrSpace(AddrSpace *parentSpace)
                                         			// pages to be read-only
         pageTable[i].shared= parentPageTable[i].shared;
         pageTable[i].cached= FALSE;
+        pageTable[i].threadPid = threadPid;
     }
 
     // Copy the contents
@@ -183,6 +186,8 @@ AddrSpace::AddrSpace(AddrSpace *parentSpace)
 unsigned 
 AddrSpace::createSharedPageTable(int sharedSize, int *pagesCreated)
 {
+    int threadPid = currentThread->GetPID();
+
     // Compute the numPages in the originalSpace
     unsigned originalPages = GetNumPages();
 
@@ -221,7 +226,8 @@ AddrSpace::createSharedPageTable(int sharedSize, int *pagesCreated)
                                         			// a separate page, we could set its
                                         			// pages to be read-only
         pageTable[i].shared = originalPageTable[i].shared;
-        pageTable[i].cached = originalPages[i].cached;
+        pageTable[i].cached = originalPageTable[i].cached;
+        pageTable[i].threadPid = originalPageTable[i].threadPid;
     }
 
     // Now set up the translation entry for the shared memory region
@@ -248,6 +254,7 @@ AddrSpace::createSharedPageTable(int sharedSize, int *pagesCreated)
         pageTable[i].readOnly = FALSE;  // if the code segment was entirely on 
         pageTable[i].shared = TRUE; // this is a shared region
         pageTable[i].cached = FALSE;
+        pageTable[i].threadPid = threadPid;
     }
 
     // Increment the number of pages allocated by the number of shared pages

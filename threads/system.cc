@@ -35,6 +35,8 @@ int pageAlgo;
 char **batchProcesses;			// Names of batch processes
 int *priority;				// Process priority
 
+TranslationEntry *pageEntries[NumPhysPages]; // A list of pageEntries
+
 int cpu_burst_start_time;        // Records the start of current CPU burst
 int completionTimeArray[MAX_THREAD_COUNT];        // Records the completion time of all simulated threads
 bool excludeMainThread;		// Used by completion time statistics calculation
@@ -125,6 +127,10 @@ Initialize(int argc, char **argv)
 
     schedulingAlgo = NON_PREEMPTIVE_BASE;	// Default
     pageAlgo = NORMAL;
+
+    for(i=0; i<NumPhysPages; ++i) {
+        pageEntries[i] = NULL;
+    }
 
     batchProcesses = new char*[MAX_BATCH_SIZE];
     ASSERT(batchProcesses != NULL);
