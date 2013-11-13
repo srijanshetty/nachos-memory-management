@@ -142,13 +142,26 @@ ExceptionHandler(ExceptionType which)
     else if ((which == SyscallException) && (type == SC_Exec)) {
        // Copy the executable name into kernel space
        vaddr = machine->ReadRegister(4);
-       machine->ReadMem(vaddr, 1, &memval);
+
+       // There is a possibility of a PageFault and so we need to reexecute this
+       // instructions until we get a valid value
+       returnValue = FALSE;
+       while(returnValue != TRUE) {
+           returnValue = machine->ReadMem(vaddr, 1, &memval);
+       }
+
        i = 0;
        while ((*(char*)&memval) != '\0') {
           buffer[i] = (*(char*)&memval);
           i++;
           vaddr++;
-          machine->ReadMem(vaddr, 1, &memval);
+
+          // There is a possibility of a PageFault and so we need to reexecute this
+          // instructions until we get a valid value
+          returnValue = FALSE;
+          while(returnValue != TRUE) {
+              returnValue = machine->ReadMem(vaddr, 1, &memval);
+          }
        }
        buffer[i] = (*(char*)&memval);
        StartExec(buffer);
@@ -236,12 +249,25 @@ ExceptionHandler(ExceptionType which)
     }
     else if ((which == SyscallException) && (type == SC_PrintString)) {
        vaddr = machine->ReadRegister(4);
-       machine->ReadMem(vaddr, 1, &memval);
+
+       // There is a possibility of a PageFault and so we need to reexecute this
+       // instructions until we get a valid value
+       returnValue = FALSE;
+       while(returnValue != TRUE) {
+           returnValue = machine->ReadMem(vaddr, 1, &memval);
+       }
+
        while ((*(char*)&memval) != '\0') {
           writeDone->P() ;
           console->PutChar(*(char*)&memval);
           vaddr++;
-          machine->ReadMem(vaddr, 1, &memval);
+
+          // There is a possibility of a PageFault and so we need to reexecute this
+          // instructions until we get a valid value
+          returnValue = FALSE;
+          while(returnValue != TRUE) {
+              returnValue = machine->ReadMem(vaddr, 1, &memval);
+          }
        }
        // Advance program counters.
        machine->WriteRegister(PrevPCReg, machine->ReadRegister(PCReg));
@@ -503,6 +529,9 @@ ExceptionHandler(ExceptionType which)
         // Return the starting address of the shared memory region
         machine->WriteRegister(2, returnValue);
     } else if (which == PageFaultException)  {
+        // Set the status of the thread to BLOCKED and then it goes for sleep
+        // for a 1000 ticks, to model the pageFault latency
+        currentThread->setStatus(BLOCKED);
         currentThread->SortedInsertInWaitQueue (1000+stats->totalTicks);
         stats->numPageFaults++;
     } else {
