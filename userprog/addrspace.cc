@@ -148,6 +148,7 @@ AddrSpace::AddrSpace(AddrSpace *parentSpace)
                         currentThread->GetPID(), parentPageTable[i].physicalPage);
 
                 // Now store this entry into the hashMap of pageEntries
+                DEBUG('R', "Adding pageEntry for %d\n", pageTable[i].physicalPage);
                 pageEntries[pageTable[i].physicalPage] = &pageTable[i];
             } else {
                 pageTable[i].physicalPage = -1;
@@ -228,6 +229,9 @@ AddrSpace::createSharedPageTable(int sharedSize, int *pagesCreated)
                                         			// pages to be read-only
         pageTable[i].shared = originalPageTable[i].shared;
         pageTable[i].cached = originalPageTable[i].cached; 
+
+        // In this case we have to remap the entries of the hashMap
+        pageEntries[pageTable[i].physicalPage] = &pageTable[i];
     }
 
     // Now set up the translation entry for the shared memory region
@@ -247,6 +251,7 @@ AddrSpace::createSharedPageTable(int sharedSize, int *pagesCreated)
         DEBUG('A', "Creating a shared page %d for %d\n", pageTable[i].physicalPage, 
                 currentThread->GetPID());
         // Now store this entry into the hashMap of pageEntries
+        DEBUG('R', "Adding pageEntry for %d\n", pageTable[i].physicalPage);
         pageEntries[pageTable[i].physicalPage] = &pageTable[i];
 
         pageTable[i].valid = TRUE;
@@ -279,7 +284,17 @@ AddrSpace::createSharedPageTable(int sharedSize, int *pagesCreated)
 
 AddrSpace::~AddrSpace()
 {
-   delete pageTable;
+    // When we are deleting an entire addressSpace which may be the case when we
+    // are deleting the thread, we remove all mapping of the pageEntries
+    int i;
+    for(i=0; i<numPages; ++i) {
+        if(pageTable[i].valid) {
+            pageEntries[pageTable[i].physicalPage] = NULL;
+            DEBUG('R', "Removing pageEntry for %d\n", pageTable[i].physicalPage);
+        }
+    }
+
+    delete pageTable;
 }
 
 //----------------------------------------------------------------------
@@ -367,6 +382,10 @@ void AddrSpace::freePages() {
             temp = new int(pageTable[i].physicalPage);
             freedPages->Append((void *)temp);
             DEBUG('A', "Freeing page %d\n", pageTable[i].physicalPage);
+
+            // We have to null out the entries which have been deleted
+            pageEntries[pageTable[i].physicalPage] = NULL;
+            DEBUG('R', "Removing pageEntry for %d\n", pageTable[i].physicalPage);
         }
     }
 

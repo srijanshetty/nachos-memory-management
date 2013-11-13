@@ -304,6 +304,7 @@ Machine::Translate(int virtAddr, int* physAddr, int size, bool writing)
             entry->valid = TRUE;
 
             // Now store this entry into the hashMap of pageEntries
+            DEBUG('R', "Adding pageEntry for %d\n", entry->physicalPage);
             pageEntries[entry->physicalPage] = entry;
 
             return PageFaultException;

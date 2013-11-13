@@ -74,7 +74,7 @@ extern bool excludeMainThread;		// Used by completion time statistics calculatio
 extern List *freedPages;            // A list of pages freed by SC_Exec
 
 // This maintains a hashMap of pageTable entries
-extern TranslationEntry *pageEntries;
+extern TranslationEntry *pageEntries[NumPhysPages];
 
 class TimeSortedWaitQueue {		// Needed to implement SC_Sleep
 private:

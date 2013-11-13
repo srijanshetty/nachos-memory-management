@@ -19,7 +19,7 @@ Statistics *stats;			// performance metrics
 Timer *timer;				// the hardware timer device,
 					// for invoking context switches
 List *freedPages;   // A list of pages freed by SC_Exec
-TranslationEntry *pageEntries; // A hashmap of page entries
+TranslationEntry *pageEntries[NumPhysPages]; // A hashmap of page entries
 
 unsigned numPagesAllocated;              // number of physical frames allocated
 unsigned nextUnallocatedPage;
@@ -123,10 +123,15 @@ Initialize(int argc, char **argv)
 
     // A list of number of freedPages
     freedPages = new List();
-    pageEntries = new TranslationEntry[NumPhysPages];
 
     schedulingAlgo = NON_PREEMPTIVE_BASE;	// Default
     pageReplacementAlgo = NORMAL; // Default
+
+    // NULL out the entries
+    for(i=0; i<NumPhysPages; ++i) {
+        pageEntries[i] = NULL;
+    }
+
 
     batchProcesses = new char*[MAX_BATCH_SIZE];
     ASSERT(batchProcesses != NULL);
