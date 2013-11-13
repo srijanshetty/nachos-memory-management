@@ -109,6 +109,10 @@ main(int argc, char **argv)
               currentThread->SetPriority(schedPriority+DEFAULT_BASE_PRIORITY);
               currentThread->SetUsage(0);
            }
+        } else if (!strcmp(*argv, "-R")) { //page algo	
+           pageAlgo = atoi(*(argv + 1));
+           argCount = 2;
+           ASSERT((pageAlgo> 0) && (pageAlgo<= 4));
         } else if (!strcmp(*argv, "-P")) {
             schedPriority = atoi(*(argv + 1));
             argCount = 2;
