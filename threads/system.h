@@ -25,6 +25,13 @@
 #define ROUND_ROBIN 		3
 #define UNIX_SCHED		4
 
+// The page replacement algorithms
+#define NORMAL 0
+#define FIFO 1
+#define LRU 2
+#define RANDOM 3
+#define LRU_CLOCK 4 
+
 #define SCHED_QUANTUM		100		// If not a multiple of timer interval, quantum will overshoot
 
 #define INITIAL_TAU		SystemTick	// Initial guess of the burst is set to the overhead of system activity
@@ -56,6 +63,7 @@ extern bool initializedConsoleSemaphores;	// Used to initialize the semaphores f
 extern bool exitThreadArray[];		// Marks exited threads
 
 extern int schedulingAlgo;		// Scheduling algorithm to simulate
+extern int pageReplacementAlgo; // The page replacement algorithm to simulate
 extern char **batchProcesses;		// Names of batch executables
 extern int *priority;			// Process priority
 
