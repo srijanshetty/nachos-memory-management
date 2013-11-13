@@ -254,6 +254,7 @@ Machine::Translate(int virtAddr, int* physAddr, int size, bool writing)
                 nextUnallocatedPage++;   // Update the number of pages allocated
             } else {
                 entry->physicalPage = *physicalPageNumber;
+                delete physicalPageNumber;
             }
             pageFrame = entry->physicalPage;
 

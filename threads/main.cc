@@ -111,6 +111,7 @@ main(int argc, char **argv)
            }
         } else if (!strcmp(*argv, "-R")) { //page algo	
            pageAlgo = atoi(*(argv + 1));
+            DEBUG('R', "The page replacement algorithm is %d\n", pageAlgo);
            argCount = 2;
            ASSERT((pageAlgo> 0) && (pageAlgo<= 4));
         } else if (!strcmp(*argv, "-P")) {

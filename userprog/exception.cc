@@ -531,7 +531,6 @@ ExceptionHandler(ExceptionType which)
     } else if (which == PageFaultException)  {
         // Set the status of the thread to BLOCKED and then it goes for sleep
         // for a 1000 ticks, to model the pageFault latency
-        currentThread->setStatus(BLOCKED);
         currentThread->SortedInsertInWaitQueue (1000+stats->totalTicks);
         stats->numPageFaults++;
     } else {

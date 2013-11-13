@@ -41,6 +41,10 @@ class TranslationEntry {
     bool dirty;         // This bit is set by the hardware every time the
 			// page is modified.
     bool shared; // To indicate whether a particular page is shared or not
+
+    bool cached; // To copy from the cache rather than the executable
+
+    int threadPid; // The thread to which this pageTable belongs to
 };
 
 #endif
