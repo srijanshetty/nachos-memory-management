@@ -111,7 +111,7 @@ void deleteFromFifoQueue(int value) {
     temp = (int *)fifoQueue->Remove();
     while( temp != NULL ) {
         if(*temp == value) {
-            DEBUG('R', "deleting the frame %d from FIFO queue\n", *temp);
+            DEBUG('q', "deleting the frame %d from FIFO queue\n", *temp);
             delete temp;
         } else {
             tempList->Append((void *)temp);

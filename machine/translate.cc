@@ -29,6 +29,7 @@
 // All rights reserved.  See copyright.h for copyright notice and limitation 
 // of liability and disclaimer of warranty provisions.
 
+#include <stdlib.h>
 #include "copyright.h"
 #include "machine.h"
 #include "addrspace.h"
@@ -250,6 +251,9 @@ Machine::Translate(int virtAddr, int* physAddr, int size, bool writing)
                 if(pageAlgo == FIFO) {
                     frameToReplace = (int *)fifoQueue->Remove();
                     DEBUG('R', "\n\tFIFO selects frame %d", *frameToReplace);
+                } else if (pageAlgo == RANDOM) {
+                    frameToReplace = new int(rand()%(NumPhysPages-1));
+                    DEBUG('R', "\n\tRANDOM selects frame %d", *frameToReplace);
                 }
 
                 // Get the PTE of this frame
@@ -306,6 +310,7 @@ Machine::Translate(int virtAddr, int* physAddr, int size, bool writing)
             // This stores a refernce to the pageTable entry
             pageEntries[entry->physicalPage] = entry;
 
+            // This is for ease of access
             pageFrame = entry->physicalPage;
 
             DEBUG('A', "Allocating physical page %d VPN %d virtualaddress %d\n", pageFrame, vpn, virtAddr);
@@ -314,7 +319,7 @@ Machine::Translate(int virtAddr, int* physAddr, int size, bool writing)
             if(pageAlgo == FIFO) {
                 int *temp = new int(pageFrame);
                 fifoQueue->Append((void *)temp);
-                DEBUG('R', "Adding frame %d to FIFO Queue\n");
+                DEBUG('q', "Adding frame %d to FIFO Queue\n");
             }
 
             // zero out this particular page
