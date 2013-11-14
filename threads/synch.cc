@@ -124,6 +124,7 @@ void Lock::Acquire() {}
 void Lock::Release() {}
 
 Condition::Condition(char* debugName) {
+    queue = new List();
 }
 
 Condition::~Condition() { }
@@ -141,6 +142,7 @@ Condition::Wait(Semaphore *mutex) {
     // control of the mutex
     mutex->V();
 	queue->Append((void *)currentThread);	// so go to sleep
+                DEBUG('C', "CA\n");
     IntStatus oldLevel = interrupt->SetLevel(IntOff);
 	currentThread->Sleep();
     (void) interrupt->SetLevel(oldLevel);

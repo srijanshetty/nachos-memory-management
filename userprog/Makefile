@@ -414,25 +414,32 @@ mipssim.o: ../machine/mipssim.cc ../threads/copyright.h \
   ../bin/noff.h ../threads/scheduler.h ../threads/list.h \
   ../machine/interrupt.h ../threads/list.h ../machine/stats.h \
   ../machine/timer.h ../filesys/filesys.h
-translate.o: ../machine/translate.cc ../threads/copyright.h \
-  ../machine/machine.h ../threads/utility.h ../threads/copyright.h \
-  ../machine/sysdep.h /usr/include/stdio.h /usr/include/features.h \
-  /usr/include/sys/cdefs.h /usr/include/bits/wordsize.h \
-  /usr/include/gnu/stubs.h /usr/include/gnu/stubs-32.h \
+translate.o: ../machine/translate.cc /usr/include/stdlib.h \
+  /usr/include/features.h /usr/include/sys/cdefs.h \
+  /usr/include/bits/wordsize.h /usr/include/gnu/stubs.h \
+  /usr/include/gnu/stubs-32.h \
   /usr/lib/gcc/i386-redhat-linux/4.1.2/include/stddef.h \
-  /usr/include/bits/types.h /usr/include/bits/typesizes.h \
-  /usr/include/libio.h /usr/include/_G_config.h /usr/include/wchar.h \
-  /usr/include/bits/wchar.h /usr/include/gconv.h \
+  /usr/include/bits/waitflags.h /usr/include/bits/waitstatus.h \
+  /usr/include/endian.h /usr/include/bits/endian.h /usr/include/xlocale.h \
+  /usr/include/sys/types.h /usr/include/bits/types.h \
+  /usr/include/bits/typesizes.h /usr/include/time.h \
+  /usr/include/sys/select.h /usr/include/bits/select.h \
+  /usr/include/bits/sigset.h /usr/include/bits/time.h \
+  /usr/include/sys/sysmacros.h /usr/include/bits/pthreadtypes.h \
+  /usr/include/alloca.h ../threads/copyright.h ../machine/machine.h \
+  ../threads/utility.h ../threads/copyright.h ../machine/sysdep.h \
+  /usr/include/stdio.h /usr/include/libio.h /usr/include/_G_config.h \
+  /usr/include/wchar.h /usr/include/bits/wchar.h /usr/include/gconv.h \
   /usr/lib/gcc/i386-redhat-linux/4.1.2/include/stdarg.h \
   /usr/include/bits/stdio_lim.h /usr/include/bits/sys_errlist.h \
-  /usr/include/string.h /usr/include/xlocale.h ../machine/translate.h \
-  ../machine/disk.h ../userprog/addrspace.h ../threads/copyright.h \
-  ../filesys/filesys.h ../threads/copyright.h ../filesys/openfile.h \
-  ../threads/utility.h ../bin/noff.h ../threads/system.h \
-  ../threads/utility.h ../threads/thread.h ../machine/machine.h \
-  ../userprog/addrspace.h ../threads/scheduler.h ../threads/list.h \
-  ../machine/interrupt.h ../threads/list.h ../machine/stats.h \
-  ../machine/timer.h ../filesys/filesys.h ../filesys/filesys.h
+  /usr/include/string.h ../machine/translate.h ../machine/disk.h \
+  ../userprog/addrspace.h ../threads/copyright.h ../filesys/filesys.h \
+  ../threads/copyright.h ../filesys/openfile.h ../threads/utility.h \
+  ../bin/noff.h ../threads/system.h ../threads/utility.h \
+  ../threads/thread.h ../machine/machine.h ../userprog/addrspace.h \
+  ../threads/scheduler.h ../threads/list.h ../machine/interrupt.h \
+  ../threads/list.h ../machine/stats.h ../machine/timer.h \
+  ../filesys/filesys.h ../filesys/filesys.h
 # DEPENDENCIES MUST END AT END OF FILE
 # IF YOU PUT STUFF HERE IT WILL GO AWAY
 # see make depend above
