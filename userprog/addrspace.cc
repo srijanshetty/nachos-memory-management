@@ -387,6 +387,7 @@ void AddrSpace::freePages(bool deletePT) {
             // Remove the entry from the hashmap
             pageEntries[pageTable[i].physicalPage] = NULL;
 
+            // delete this element from the PageQueue
             deleteFromPageQueue(pageTable[i].physicalPage);
         }
     }

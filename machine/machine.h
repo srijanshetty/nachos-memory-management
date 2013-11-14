@@ -32,7 +32,7 @@
 					// the disk sector size, for
 					// simplicity
 
-//#define NumPhysPages    32
+//#define NumPhysPages   16 
 //#define NumPhysPages    1024
 #define NumPhysPages   7 
 #define MemorySize 	(NumPhysPages * PageSize)

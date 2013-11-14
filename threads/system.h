@@ -73,6 +73,7 @@ extern int cpu_burst_start_time;	// Records the start of current CPU burst
 extern int completionTimeArray[];	// Records the completion time of all simulated threads
 extern bool excludeMainThread;		// Used by completion time statistics calculation
 extern List *freedPages;            // A list of pages freed by SC_Exec
+extern int referenceBit[NumPhysPages]; // An array of reference bits of the pageFrames
 
 class TimeSortedWaitQueue {		// Needed to implement SC_Sleep
 private:

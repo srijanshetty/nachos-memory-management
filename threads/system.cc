@@ -37,6 +37,7 @@ int *priority;				// Process priority
 
 TranslationEntry *pageEntries[NumPhysPages]; // A list of pageEntries
 List *pageQueue; 
+int referenceBit[NumPhysPages]; // reference bit
 
 int cpu_burst_start_time;        // Records the start of current CPU burst
 int completionTimeArray[MAX_THREAD_COUNT];        // Records the completion time of all simulated threads
@@ -102,6 +103,34 @@ TimerInterruptHandler(int dummy)
     }
 }
 
+// This is a method which implements LRU_CLOCK
+int* getLRUClockFrame() {
+    List *tempList = new List();
+    int *temp;
+    int *frameToReplace;
+
+    temp = (int *)pageQueue->Remove();
+    while( temp != NULL ) {
+        if(referenceBit[*temp] == 0) {
+            // This is the element which we need
+            frameToReplace = temp;
+        } else {
+            // Reset the referenceBit of this pageFrame
+            referenceBit[*temp] = 0;
+        }
+
+        // We have to maintain the list so we add all elements back by default
+        tempList->Append((void *)temp);
+        temp = (int *)pageQueue->Remove();
+    }
+
+    // The pageQueue now is the modified pageQueue
+    delete pageQueue;
+    pageQueue = tempList;
+
+    // Now return the frameToReplace
+    return frameToReplace;
+}
 
 // This method is used to delete an element from the FIFO Queue
 void deleteFromPageQueue(int value) {
@@ -118,6 +147,9 @@ void deleteFromPageQueue(int value) {
         }
         temp = (int *)pageQueue->Remove();
     }
+
+    // The pageQueue now is the modified pageQueue
+    delete pageQueue;
     pageQueue = tempList;
 }
 
@@ -151,6 +183,7 @@ Initialize(int argc, char **argv)
 
     for(i=0; i<NumPhysPages; ++i) {
         pageEntries[i] = NULL;
+        referenceBit[i] = 0;
     }
 
     batchProcesses = new char*[MAX_BATCH_SIZE];

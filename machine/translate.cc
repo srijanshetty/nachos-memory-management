@@ -72,6 +72,7 @@ WordToMachine(unsigned int word) { return WordToHost(word); }
 unsigned short
 ShortToMachine(unsigned short shortword) { return ShortToHost(shortword); }
 
+extern int* getLRUClockFrame();
 
 //----------------------------------------------------------------------
 // Machine::ReadMem
@@ -256,13 +257,18 @@ Machine::Translate(int virtAddr, int* physAddr, int size, bool writing)
                     DEBUG('R', "\n\tRANDOM selects frame %d", *frameToReplace);
                 } else if (pageAlgo == LRU) {
                     frameToReplace = (int *)pageQueue->Remove();
-                    DEBUG('R', "\n\tFIFO selects frame %d", *frameToReplace);
+                    DEBUG('R', "\n\tLRU selects frame %d", *frameToReplace);
+                } else if (pageAlgo == LRU_CLOCK) {
+                    frameToReplace = getLRUClockFrame();
+                    DEBUG('R', "\n\tLRU CLOCK selects frame %d", *frameToReplace);
                 }
-
 
                 // Get the PTE of this frame
                 frameEntry = pageEntries[*frameToReplace];
                 Thread *thread = threadArray[frameEntry->threadPid];
+
+                // We have to delete the frameToReplace
+                delete frameToReplace;
 
                 DEBUG('R', "\n\tvirtual %d physical %d thread %d shared %d valid %d", 
                         frameEntry->virtualPage, frameEntry->physicalPage, 
@@ -319,8 +325,8 @@ Machine::Translate(int virtAddr, int* physAddr, int size, bool writing)
 
             DEBUG('A', "Allocating physical page %d VPN %d virtualaddress %d\n", pageFrame, vpn, virtAddr);
 
-            // Add the newly allocated page to the pageQueue 
-            if(pageAlgo == FIFO) {
+            // In case of FIFO or LRU_CLOCK we maintain a fifo queue of elements
+            if(pageAlgo == FIFO || pageAlgo == LRU_CLOCK) {
                 int *temp = new int(pageFrame);
                 pageQueue->Append((void *)temp);
                 DEBUG('q', "Adding frame %d to pageQueue\n");
@@ -404,6 +410,10 @@ Machine::Translate(int virtAddr, int* physAddr, int size, bool writing)
         int *temp = new int(pageFrame);
         pageQueue->Append((void *)temp);
         DEBUG('q', "Adding the frame %d to the pageQueue\n", pageFrame);
+    } else if (pageAlgo == LRU_CLOCK) {
+        // We have to set the reference bit of the element if it's not set and
+        // let it remain the same if it's set
+        referenceBit[pageFrame] = 1;
     }
 
     return NoException;
