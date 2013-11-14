@@ -335,6 +335,7 @@ Machine::Translate(int virtAddr, int* physAddr, int size, bool writing)
             }
 
             if(pageAlgo == LRU_CLOCK){
+                deleteFromPageQueue(pageFrame);
                 int *temp = new int(pageFrame);
                 pageQueue->Append((void *)temp);
 
@@ -345,7 +346,7 @@ Machine::Translate(int virtAddr, int* physAddr, int size, bool writing)
                     LRUClockhand = new int(*temp);
                 }
 
-                DEBUG('Q', "LRU_CLOCK Update\t ");
+                DEBUG('Q', "LRU_CLK List \t ");
                 printQueue();
             }
 

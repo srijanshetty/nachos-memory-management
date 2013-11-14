@@ -108,14 +108,25 @@ void printQueue() {
     List *tempList = new List();
     int *temp;
 
-    DEBUG('Q', "The queue is: \t");
+    DEBUG('Q', "\n\tThe queue is: \t");
     temp = (int *)pageQueue->Remove();
     while( temp != NULL ) {
         DEBUG('Q', " %d", *temp);
         tempList->Append((void *)temp);
         temp = (int *)pageQueue->Remove();
     }
-    DEBUG('Q', "\n");
+
+    if(pageAlgo == LRU_CLOCK) {
+        DEBUG('Q', "\n\tReferenceBit: \t");
+        int i;
+        for(i=0; i<NumPhysPages;++i){
+            DEBUG('Q', " %d", referenceBit[i]);
+        }
+        if(LRUClockhand != NULL) {
+            DEBUG('Q', "\n\tLRUClockHandle:  %d", *LRUClockhand);
+        }
+        DEBUG('Q', "\n");
+    }
 
     // The pageQueue now is the modified pageQueue
     delete pageQueue;
