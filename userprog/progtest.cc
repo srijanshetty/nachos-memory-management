@@ -71,13 +71,14 @@ StartExec(char *filename)
         return;
     }
 
-    // delete the old backupMemory
-    delete currentThread->backupMemory;
-
     // Create a new address space and pass it the name of the executable
     if(pageAlgo != NORMAL) {
         currentThread->space->freePages(TRUE);
+
+        // delete the old backupMemory
+        delete currentThread->backupMemory;
     }
+
     space = new AddrSpace(executable);    
     currentThread->space = space;
     strcpy(space->filename, filename);
