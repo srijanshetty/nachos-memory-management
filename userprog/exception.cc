@@ -165,6 +165,7 @@ ExceptionHandler(ExceptionType which)
        }
        buffer[i] = (*(char*)&memval);
        StartExec(buffer);
+       DEBUG('C', "%s", buffer);
     }
     else if ((which == SyscallException) && (type == SC_Join)) {
        waitpid = machine->ReadRegister(4);

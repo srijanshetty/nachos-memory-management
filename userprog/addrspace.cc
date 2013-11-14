@@ -119,14 +119,15 @@ AddrSpace::AddrSpace(OpenFile *executable)
         numPages = divRoundUp(size, PageSize);
         size = numPages * PageSize;
 
+        DEBUG('a', "Initializing address space, num pages %d, size %d\n", 
+                numPages, size);
+
         numPagesAllocated += numPages;
-        ASSERT(numPages <= NumPhysPages);		// check we're not trying
+        ASSERT(numPagesAllocated<= NumPhysPages);		// check we're not trying
                                                                 // to run anything too big --
                                                                 // at least until we have
                                                                 // virtual memory
 
-        DEBUG('a', "Initializing address space, num pages %d, size %d\n", 
-                numPages, size);
         // first, set up the translation 
         pageTable = new TranslationEntry[numPages];
         for (i = 0; i < numPages; i++) {
@@ -142,9 +143,10 @@ AddrSpace::AddrSpace(OpenFile *executable)
             pageTable[i].cached = FALSE;
             pageTable[i].threadPid = threadPid;
         }
+
         // zero out the entire address space, to zero the unitialized data segment 
         // and the stack segment
-        bzero(&machine->mainMemory[numPagesAllocated*PageSize], size);
+        bzero(&machine->mainMemory[pageTable[0].physicalPage], size);
 
         // then, copy in the code and data segments into memory
         if (noffH.code.size > 0) {
@@ -191,14 +193,14 @@ AddrSpace::AddrSpace(AddrSpace *parentSpace, int threadPid)
         strcpy(filename, parentSpace->filename);
         unsigned i,j;
 
+        DEBUG('a', "Initializing address space, num pages %d, shared %d, valid %d\n",
+                                            numPages, countSharedPages, validPages);
+
         numPagesAllocated += validPages-countSharedPages;
         ASSERT(numPagesAllocated <= NumPhysPages);        // check we're not trying
                                                                                     // to run anything too big --
                                                                                     // at least until we have
                                                                                     // virtual memory
-
-        DEBUG('a', "Initializing address space, num pages %d, shared %d, valid %d\n",
-                                            numPages, countSharedPages, validPages);
 
         // first, set up the translation
         TranslationEntry* parentPageTable = parentSpace->GetPageTable();
@@ -270,14 +272,15 @@ AddrSpace::AddrSpace(AddrSpace *parentSpace, int threadPid)
         // Now we copy the executable name of the parentSpace to the childSpace
         strcpy(filename, parentSpace->filename);
 
+        DEBUG('a', "Initializing address space, num pages %d, shared %d\n",
+                numPages-countSharedPages, countSharedPages);
+
         numPagesAllocated += validPages-countSharedPages;
         ASSERT(numPagesAllocated <= NumPhysPages);        // check we're not trying
                                                             // to run anything too big --
                                                             // at least until we have
                                                             // virtual memory
 
-        DEBUG('a', "Initializing address space, num pages %d, shared %d\n",
-                numPages-countSharedPages, countSharedPages);
         // first, set up the translation
         TranslationEntry* parentPageTable = parentSpace->GetPageTable();
         pageTable = new TranslationEntry[numPages];
