@@ -56,6 +56,7 @@ extern Statistics *stats;			// performance metrics
 extern Timer *timer;				// the hardware alarm clock
 extern unsigned numPagesAllocated;		// number of physical frames allocated
 extern unsigned nextUnallocatedPage; // This stores the next unallocated Page
+extern int *LRUClockhand; // The clock hand of LRU_CLock
 
 extern Thread *threadArray[];  // Array of thread pointers
 extern unsigned thread_index;                  // Index into this array (also used to assign unique pid)

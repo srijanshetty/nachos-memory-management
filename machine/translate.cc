@@ -73,6 +73,7 @@ unsigned short
 ShortToMachine(unsigned short shortword) { return ShortToHost(shortword); }
 
 extern int* getLRUClockFrame();
+extern void printQueue();
 
 //----------------------------------------------------------------------
 // Machine::ReadMem
@@ -240,7 +241,7 @@ Machine::Translate(int virtAddr, int* physAddr, int size, bool writing)
             unsigned int size = numPages * PageSize;
             unsigned int readSize = PageSize;
 
-            if(numPagesAllocated == (NumPhysPages-1)) {
+            if(numPagesAllocated == NumPhysPages) {
                 // here we have to handle page replacement
                 DEBUG('R', "\nInvoking page replacement algorithm: ");
 
@@ -326,10 +327,26 @@ Machine::Translate(int virtAddr, int* physAddr, int size, bool writing)
             DEBUG('A', "Allocating physical page %d VPN %d virtualaddress %d\n", pageFrame, vpn, virtAddr);
 
             // In case of FIFO or LRU_CLOCK we maintain a fifo queue of elements
-            if(pageAlgo == FIFO || pageAlgo == LRU_CLOCK) {
+            if(pageAlgo == FIFO) {
                 int *temp = new int(pageFrame);
                 pageQueue->Append((void *)temp);
-                DEBUG('q', "Adding frame %d to pageQueue\n");
+                DEBUG('Q', "FIFO Update ");
+                printQueue();
+            }
+
+            if(pageAlgo == LRU_CLOCK){
+                int *temp = new int(pageFrame);
+                pageQueue->Append((void *)temp);
+
+                // If this is the first page fault then we set the LRU_CLOCK
+                // hand
+                if(stats->numPageFaults == 0) {
+                    DEBUG('q', "Setting the LRU_CLOCK Hand to %d\n", *temp);
+                    LRUClockhand = new int(*temp);
+                }
+
+                DEBUG('Q', "LRU_CLOCK Update\t ");
+                printQueue();
             }
 
             // zero out this particular page
@@ -409,11 +426,14 @@ Machine::Translate(int virtAddr, int* physAddr, int size, bool writing)
         // pop, we pop from the head so this is the same as LRU
         int *temp = new int(pageFrame);
         pageQueue->Append((void *)temp);
-        DEBUG('q', "Adding the frame %d to the pageQueue\n", pageFrame);
+        DEBUG('Q', "LRU Update %d\t", pageFrame);
+        printQueue();
     } else if (pageAlgo == LRU_CLOCK) {
         // We have to set the reference bit of the element if it's not set and
         // let it remain the same if it's set
         referenceBit[pageFrame] = 1;
+        DEBUG('Q', "LRU_C Update %d\t", pageFrame);
+        printQueue();
     }
 
     return NoException;

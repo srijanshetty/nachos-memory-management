@@ -37,6 +37,7 @@ int *priority;				// Process priority
 
 TranslationEntry *pageEntries[NumPhysPages]; // A list of pageEntries
 List *pageQueue; 
+int *LRUClockhand; // The clock hand of LRU_CLock
 int referenceBit[NumPhysPages]; // reference bit
 
 int cpu_burst_start_time;        // Records the start of current CPU burst
@@ -103,32 +104,81 @@ TimerInterruptHandler(int dummy)
     }
 }
 
-// This is a method which implements LRU_CLOCK
-int* getLRUClockFrame() {
+void printQueue() {
     List *tempList = new List();
     int *temp;
-    int *frameToReplace;
 
+    DEBUG('Q', "The queue is: \t");
     temp = (int *)pageQueue->Remove();
     while( temp != NULL ) {
-        if(referenceBit[*temp] == 0) {
-            // This is the element which we need
-            frameToReplace = temp;
-        } else {
-            // Reset the referenceBit of this pageFrame
-            referenceBit[*temp] = 0;
-        }
-
-        // We have to maintain the list so we add all elements back by default
+        DEBUG('Q', " %d", *temp);
         tempList->Append((void *)temp);
         temp = (int *)pageQueue->Remove();
     }
+    DEBUG('Q', "\n");
 
     // The pageQueue now is the modified pageQueue
     delete pageQueue;
     pageQueue = tempList;
+}
 
-    // Now return the frameToReplace
+// This is a method which implements LRU_CLOCK
+int* getLRUClockFrame() {
+    List *originalList = new List();
+    List *clockList = new List();
+
+    // Firstly we create two copies of the list, one for traversal and the other
+    // one to maintain the fifo order
+    int *temp1;
+    int *temp = (int *)pageQueue->Remove();
+    while( temp != NULL ) {
+        temp1 = new int(*temp);
+        originalList->Append((void *)temp);
+        clockList->Append((void *)temp1);
+        temp = (int *)pageQueue->Remove();
+    }
+
+    // delete the pageQueue and link it to originalList
+    delete pageQueue;
+    pageQueue = originalList;
+
+    // Now we reorder the clock list so that the clockhand is the head
+    temp = (int *)clockList->Remove();
+    while(*temp != *LRUClockhand) {
+        clockList->Append((void *) temp);
+        temp = (int *)clockList->Remove();
+    }
+
+    // Now we run the LRU CLock algorithm to check if we find an element with
+    // reference bit unset
+    int *frameToReplace = NULL;
+    while(1) {
+        if(referenceBit[*temp] == 0) {
+            frameToReplace = new int(*temp);
+            temp = (int *)clockList->Remove();
+            *LRUClockhand = *temp;
+            break;
+        } else {
+            // reset the reference bit
+            referenceBit[*temp] = 0;
+        }
+
+        // Add this element back to the clocklist
+        clockList->Append((void *)temp);
+
+        // delete temp and move forward
+        temp = (int *)clockList->Remove();
+    }
+
+    // delete the clockList
+    temp = (int *)clockList->Remove();
+    while(temp != NULL) {
+        delete temp;
+        temp = (int *)clockList->Remove();
+    }
+    delete clockList;
+
+    // return the frame to replace
     return frameToReplace;
 }
 
@@ -151,6 +201,9 @@ void deleteFromPageQueue(int value) {
     // The pageQueue now is the modified pageQueue
     delete pageQueue;
     pageQueue = tempList;
+
+    DEBUG('Q', "Delete Queue %d\t", value);
+    printQueue();
 }
 
 //----------------------------------------------------------------------
