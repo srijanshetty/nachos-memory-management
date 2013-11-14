@@ -23,6 +23,7 @@ test/sem1
 test/sem
 test/sem2
 test/sem3
+test/sem4
 test/vmtest1
 test/vmtest2
 userprog/nachos
