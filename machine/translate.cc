@@ -221,7 +221,7 @@ Machine::Translate(int virtAddr, int* physAddr, int size, bool writing)
                     virtAddr, pageTableSize);
             return AddressErrorException;
         } else if (!pageTable[vpn].valid) {
-            if(currentThread->space->validPages < numPages) {
+            if(currentThread->space->validPages < numPages && pageAlgo != NORMAL) {
                 // In this case we have to perform demand paging whose code is
                 // given below
                 flag = 1;

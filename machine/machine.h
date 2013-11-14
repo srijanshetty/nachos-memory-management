@@ -33,12 +33,12 @@
 					// simplicity
 
 //#define NumPhysPages   16 
-#define NumPhysPages   32 
+//#define NumPhysPages   32 
 //#define NumPhysPages   64 
 //#define NumPhysPages   128 
 //#define NumPhysPages   256 
 //#define NumPhysPages   512 
-//#define NumPhysPages   1024 
+#define NumPhysPages   1024 
 #define MemorySize 	(NumPhysPages * PageSize)
 #define TLBSize		4		// if there is a TLB, make it small
 

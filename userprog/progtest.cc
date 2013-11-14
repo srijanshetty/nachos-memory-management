@@ -75,7 +75,9 @@ StartExec(char *filename)
     delete currentThread->backupMemory;
 
     // Create a new address space and pass it the name of the executable
-    currentThread->space->freePages(TRUE);
+    if(pageAlgo != NORMAL) {
+        currentThread->space->freePages(TRUE);
+    }
     space = new AddrSpace(executable);    
     currentThread->space = space;
     strcpy(space->filename, filename);

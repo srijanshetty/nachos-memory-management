@@ -266,7 +266,9 @@ Thread::Exit (bool terminateSim, int exitcode)
     }
 
     // Free the pages associated with this thread
-    currentThread->space->freePages(FALSE);
+    if(pageAlgo != NORMAL) {
+        currentThread->space->freePages(FALSE);
+    }
 
     nextThread = scheduler->FindNextToRun();
     if (nextThread == NULL) {

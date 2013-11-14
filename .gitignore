@@ -15,6 +15,7 @@
 *.noff
 
 # Extra file
+userprog/R?_*
 copy
 test/temp
 test/shm
