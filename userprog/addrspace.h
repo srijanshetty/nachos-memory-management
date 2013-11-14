@@ -19,7 +19,7 @@
 
 #define UserStackSize		1024 	// increase this as necessary!
 
-extern void deleteFromFifoQueue(int value);
+extern void deleteFromPageQueue(int value);
 
 class AddrSpace {
   public:

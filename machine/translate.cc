@@ -249,12 +249,16 @@ Machine::Translate(int virtAddr, int* physAddr, int size, bool writing)
 
                 // Select the frame according to the algorithm
                 if(pageAlgo == FIFO) {
-                    frameToReplace = (int *)fifoQueue->Remove();
+                    frameToReplace = (int *)pageQueue->Remove();
                     DEBUG('R', "\n\tFIFO selects frame %d", *frameToReplace);
                 } else if (pageAlgo == RANDOM) {
                     frameToReplace = new int(rand()%(NumPhysPages-1));
                     DEBUG('R', "\n\tRANDOM selects frame %d", *frameToReplace);
+                } else if (pageAlgo == LRU) {
+                    frameToReplace = (int *)pageQueue->Remove();
+                    DEBUG('R', "\n\tFIFO selects frame %d", *frameToReplace);
                 }
+
 
                 // Get the PTE of this frame
                 frameEntry = pageEntries[*frameToReplace];
@@ -315,11 +319,11 @@ Machine::Translate(int virtAddr, int* physAddr, int size, bool writing)
 
             DEBUG('A', "Allocating physical page %d VPN %d virtualaddress %d\n", pageFrame, vpn, virtAddr);
 
-            // Add the newly allocated page to the fifoQueue
+            // Add the newly allocated page to the pageQueue 
             if(pageAlgo == FIFO) {
                 int *temp = new int(pageFrame);
-                fifoQueue->Append((void *)temp);
-                DEBUG('q', "Adding frame %d to FIFO Queue\n");
+                pageQueue->Append((void *)temp);
+                DEBUG('q', "Adding frame %d to pageQueue\n");
             }
 
             // zero out this particular page
@@ -389,6 +393,19 @@ Machine::Translate(int virtAddr, int* physAddr, int size, bool writing)
     *physAddr = pageFrame * PageSize + offset;
     ASSERT((*physAddr >= 0) && ((*physAddr + size) <= MemorySize));
     DEBUG('a', "phys addr = 0x%x\n", *physAddr);
+
+    // A new frame is updated so ww change the LRU pageQueue
+    if(pageAlgo == LRU) {
+        // First of all we delete the element if it's in the queue
+        deleteFromPageQueue(pageFrame);
+
+        // We add this element to the bottom of the pageQueue, every time we
+        // pop, we pop from the head so this is the same as LRU
+        int *temp = new int(pageFrame);
+        pageQueue->Append((void *)temp);
+        DEBUG('q', "Adding the frame %d to the pageQueue\n", pageFrame);
+    }
+
     return NoException;
 }
 

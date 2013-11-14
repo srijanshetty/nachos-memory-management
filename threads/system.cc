@@ -36,7 +36,7 @@ char **batchProcesses;			// Names of batch processes
 int *priority;				// Process priority
 
 TranslationEntry *pageEntries[NumPhysPages]; // A list of pageEntries
-List *fifoQueue; 
+List *pageQueue; 
 
 int cpu_burst_start_time;        // Records the start of current CPU burst
 int completionTimeArray[MAX_THREAD_COUNT];        // Records the completion time of all simulated threads
@@ -104,21 +104,21 @@ TimerInterruptHandler(int dummy)
 
 
 // This method is used to delete an element from the FIFO Queue
-void deleteFromFifoQueue(int value) {
+void deleteFromPageQueue(int value) {
     List *tempList = new List();
     int *temp;
 
-    temp = (int *)fifoQueue->Remove();
+    temp = (int *)pageQueue->Remove();
     while( temp != NULL ) {
         if(*temp == value) {
-            DEBUG('q', "deleting the frame %d from FIFO queue\n", *temp);
+            DEBUG('q', "deleting the frame %d from pageQueue\n", *temp);
             delete temp;
         } else {
             tempList->Append((void *)temp);
         }
-        temp = (int *)fifoQueue->Remove();
+        temp = (int *)pageQueue->Remove();
     }
-    fifoQueue = tempList;
+    pageQueue = tempList;
 }
 
 //----------------------------------------------------------------------
@@ -147,7 +147,7 @@ Initialize(int argc, char **argv)
 
     schedulingAlgo = NON_PREEMPTIVE_BASE;	// Default
     pageAlgo = NORMAL;
-    fifoQueue = new List();
+    pageQueue = new List();
 
     for(i=0; i<NumPhysPages; ++i) {
         pageEntries[i] = NULL;
