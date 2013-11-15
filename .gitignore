@@ -17,6 +17,7 @@
 # Extra file
 userprog/R?_*
 test/queue
+test/sem5*
 copy
 test/temp
 test/shm

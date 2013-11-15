@@ -37,7 +37,7 @@ CPP = /usr/bin/cpp
 INCDIR =-I../userprog -I../threads
 CFLAGS = -G 0 -c $(INCDIR)
 
-all: halt shell matmult sort printtest vectorsum testregPA forkjoin testexec testyield testloop forkjoin_hard testloop1 testloop2 testloop3 testlooplong testloop4 testloop5 vmtest1 vmtest2 shm sem1 sem2 sem3 sem4 queue
+all: halt shell matmult sort printtest vectorsum testregPA forkjoin testexec testyield testloop forkjoin_hard testloop1 testloop2 testloop3 testlooplong testloop4 testloop5 vmtest1 vmtest2 shm sem1 sem2 sem3 sem4 sem5_cv queue sem5_busy
 
 start.o: start.s ../userprog/syscall.h
 	$(CPP) $(CPPFLAGS) start.s > strt.s
@@ -95,6 +95,22 @@ queue.o: queue.c
 queue: queue.o start.o
 	$(LD) $(LDFLAGS) start.o queue.o -o queue.coff
 	../bin/coff2noff queue.coff queue
+
+sem5_busy.o: sem5_busy.c
+	$(CC) $(INCDIR) -S sem5_busy.c -o sem5_busy.s
+	$(AS) $(CFLAGS) sem5_busy.s -o sem5_busy.o
+	rm -f sem5_busy.s
+sem5_busy: sem5_busy.o start.o
+	$(LD) $(LDFLAGS) start.o sem5_busy.o -o sem5_busy.coff
+	../bin/coff2noff sem5_busy.coff sem5_busy
+
+sem5_cv.o: sem5_cv.c
+	$(CC) $(INCDIR) -S sem5_cv.c -o sem5_cv.s
+	$(AS) $(CFLAGS) sem5_cv.s -o sem5_cv.o
+	rm -f sem5_cv.s
+sem5_cv: sem5_cv.o start.o
+	$(LD) $(LDFLAGS) start.o sem5_cv.o -o sem5_cv.coff
+	../bin/coff2noff sem5_cv.coff sem5_cv
 
 vectorsum.o: vectorsum.c
 	$(CC) $(INCDIR) -S vectorsum.c -o vectorsum.s
