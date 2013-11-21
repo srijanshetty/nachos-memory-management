@@ -347,6 +347,7 @@ AddrSpace::createSharedPageTable(int sharedSize, int *pagesCreated)
     numPages = originalPages + sharedPages;
     unsigned i;
 
+    // This is for NEPALI - DAKSH!!!!!!
     numPagesAllocated +=sharedPages;
     ASSERT(numPagesAllocated <= NumPhysPages);                // check we're not trying
                                                                                 // to run anything too big --
@@ -393,6 +394,9 @@ AddrSpace::createSharedPageTable(int sharedSize, int *pagesCreated)
 
         DEBUG('A', "Creating a shared page %d for %d\n", pageTable[i].physicalPage, 
                 currentThread->GetPID());
+        // Now store this entry into the hashMap of pageEntries
+        DEBUG('R', "Adding pageEntry for %d\n", pageTable[i].physicalPage);
+        pageEntries[pageTable[i].physicalPage] = &pageTable[i];
 
         pageTable[i].valid = TRUE;
         pageTable[i].use = FALSE;
@@ -425,7 +429,17 @@ AddrSpace::createSharedPageTable(int sharedSize, int *pagesCreated)
 
 AddrSpace::~AddrSpace()
 {
-   delete pageTable;
+    // When we are deleting an entire addressSpace which may be the case when we
+    // are deleting the thread, we remove all mapping of the pageEntries
+    int i;
+    for(i=0; i<numPages; ++i) {
+        if(pageTable[i].valid) {
+            pageEntries[pageTable[i].physicalPage] = NULL;
+            DEBUG('R', "Removing pageEntry for %d\n", pageTable[i].physicalPage);
+        }
+    }
+
+    delete pageTable;
 }
 
 //----------------------------------------------------------------------

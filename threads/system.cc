@@ -19,6 +19,7 @@ Statistics *stats;			// performance metrics
 Timer *timer;				// the hardware timer device,
 					// for invoking context switches
 List *freedPages;   // A list of pages freed by SC_Exec
+TranslationEntry *pageEntries[NumPhysPages]; // A hashmap of page entries
 
 unsigned numPagesAllocated;              // number of physical frames allocated
 unsigned nextUnallocatedPage;

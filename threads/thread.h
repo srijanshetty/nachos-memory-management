@@ -148,6 +148,8 @@ class Thread {
 
     void SetUsage (int usage);
     int GetUsage (void);
+    char *pageCache; // This caches the pages in case of replacement
+    void initPageCache(int cacheSize); 
 
   private:
     // some of the private data for this class is listed above

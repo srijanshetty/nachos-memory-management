@@ -235,9 +235,6 @@ Machine::Translate(int virtAddr, int* physAddr, int size, bool writing)
 
         // Demand Paging
         if(flag) {
-            // Open the file while is to be loaded into memory
-            OpenFile *executable = fileSystem->Open(currentThread->space->filename);
-            NoffHeader noffH = currentThread->space->noffH;
             unsigned int size = numPages * PageSize;
             unsigned int readSize = PageSize;
 
@@ -373,7 +370,12 @@ Machine::Translate(int virtAddr, int* physAddr, int size, bool writing)
                 executable->ReadAt(&(machine->mainMemory[pageFrame * PageSize]),
                         readSize, noffH.code.inFileAddr + vpn*PageSize);
             }
+                executable->ReadAt(&(machine->mainMemory[pageFrame * PageSize]),
+                        readSize, noffH.code.inFileAddr + vpn*PageSize);
 
+                // delete the opened executable
+                delete executable;
+            }
 
             // The number of valid pages of this thread has increased
             currentThread->space->validPages++;
@@ -381,8 +383,10 @@ Machine::Translate(int virtAddr, int* physAddr, int size, bool writing)
             // Mark this pagetable entry as valid
             entry->valid = TRUE;
 
-            // delete the opened executable
-            delete executable;
+            // Now store this entry into the hashMap of pageEntries
+            DEBUG('R', "Adding pageEntry for %d\n", entry->physicalPage);
+            pageEntries[entry->physicalPage] = entry;
+
             return PageFaultException;
         }
     } else {
