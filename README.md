@@ -1,5 +1,5 @@
-nachos-final
-============
+nachos-memory-management
+========================
 
 NachOS final assignment
 
